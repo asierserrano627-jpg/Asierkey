@@ -1,4 +1,4 @@
-// AsierKey API: un solo archivo para /api/ping, /api/create, /api/start, /api/complete, /api/status
+// AsierKey API: un solo archivo para /api/ping, /api/create, /api/start, /api/complete, /api/status, /api/verify
 const crypto = require('crypto');
 
 const DB_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
@@ -121,6 +121,16 @@ module.exports = async (req, res) => {
         await db('DEL', pk);
       }
       return send(200, { ok: true, done });
+    }
+
+    if (route === 'verify') {
+      const q = req.method === 'POST' ? body : req.query;
+      const k = q.k, hwid = q.hwid, key = String(q.key || '').trim().toUpperCase();
+      if (!key || !okHw(hwid) || !(await getCfg(k))) return send(200, { valid: false });
+      const stored = await db('GET', `key:${k}:${hwid}`);
+      if (!stored || String(stored).toUpperCase() !== key) return send(200, { valid: false });
+      const left = await db('TTL', `key:${k}:${hwid}`);
+      return send(200, { valid: true, expiresIn: Math.max(0, left) });
     }
 
     return send(404, { error: 'Ruta no encontrada: /api/' + route });
