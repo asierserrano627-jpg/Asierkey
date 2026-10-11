@@ -108,6 +108,9 @@ input{user-select:text;-webkit-user-select:text}
 .rf{stroke:#4ade80;stroke-dasharray:327;stroke-dashoffset:327;filter:drop-shadow(0 0 6px rgba(74,222,128,.7))}
 .ring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:Orbitron,Outfit,sans-serif;font-size:2.2rem}
 .go:disabled{opacity:.45;cursor:not-allowed}
+.mi{padding:10px;margin-bottom:8px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:.8rem;color:rgba(235,240,255,.8)}
+.mi b{display:block;font-size:.84rem;margin-bottom:3px;color:#fff;word-break:break-all}
+.mi .krow{margin-top:8px}
 </style>
 </head>
 <body>
@@ -119,7 +122,7 @@ input{user-select:text;-webkit-user-select:text}
     <h2>MENÚ</h2>
     <button class="item" id="goLogin" type="button"><svg class="ic"><use href="#i-user"/></svg>Iniciar sesión</button>
     <button class="item" id="mk" type="button" disabled><svg class="ic"><use href="#i-key"/></svg>Crear key <small>Requiere login</small></button>
-    <button class="item" type="button" disabled><svg class="ic"><use href="#i-list"/></svg>Mis links <small>Pronto</small></button>
+    <button class="item" id="goML" type="button" disabled><svg class="ic"><use href="#i-list"/></svg>Mis links <small>Requiere login</small></button>
     <button class="item" type="button" disabled><svg class="ic"><use href="#i-set"/></svg>Ajustes <small>Pronto</small></button>
     <p class="msg">Tu HWID: <b id="hw"></b></p>
   </div>
@@ -129,7 +132,6 @@ input{user-select:text;-webkit-user-select:text}
     <input id="p" type="password" placeholder="Contraseña" autocomplete="current-password">
     <button class="go" id="ent" type="button">Entrar</button>
     <p class="msg" id="ms" style="color:#ffb4b4"></p>
-    <p class="msg">Modo demo: todavía sin cuentas reales.</p>
   </div>
   <div class="login" id="ck">
     <button class="back" id="bk" type="button"><svg class="ic"><use href="#i-back"/></svg>Volver</button>
@@ -174,6 +176,12 @@ input{user-select:text;-webkit-user-select:text}
       <p class="msg" id="idl"></p>
       <button class="kbtn" id="cl" type="button" style="width:100%;margin-top:8px"><svg class="ic"><use href="#i-copy"/></svg><span>Copiar link</span></button>
     </div>
+  </div>
+  <div class="login" id="ml">
+    <button class="back" id="bk3" type="button"><svg class="ic"><use href="#i-back"/></svg>Volver</button>
+    <h2>MIS LINKS</h2>
+    <div id="mll"></div>
+    <p class="msg" id="mlm"></p>
   </div>
 </nav>
 <div class="ov" id="ov">
@@ -254,7 +262,7 @@ async function load(){
   paint();
 }
 async function complete(tk){
-  try{const r=await fetch('/api/complete',J({token:tk}));const d=await r.json();
+  try{const r=await fetch('/api/complete',J({token:tk,ref:document.referrer||''}));const d=await r.json();
     NOTE=d.error?(d.wait?'Aún no has completado el checkpoint (faltan '+d.wait+'s). Pulsa Open otra vez.':d.error):'';
   }catch(e){NOTE='No se pudo validar el checkpoint.'}
   PEND=null;ls.s('ak_pending',null);await load();
@@ -269,11 +277,11 @@ $('op').onclick=async()=>{
   if(!(HW&&K)||LOCKED)return;
   $('op').disabled=true;NOTE='';
   try{
-    const r=await fetch('/api/start',J({k:K,hwid:HW}));const d=await r.json();
+    const r=await fetch('/api/start',J({k:K,hwid:HW,env:{wd:navigator.webdriver?1:0}}));const d=await r.json();
     if(!d.token)throw d.error||'No se pudo iniciar el checkpoint.';
     ls.s('ak_pending',JSON.stringify({k:K,hwid:HW,token:d.token}));
     if(d.url)location.href=d.url;else own(d);
-  }catch(e){NOTE=typeof e==='string'?e:'No se pudo conectar con el servidor.';paint()}
+  }catch(e){NOTE=typeof e==='string'?e:'No se pudo conectar con el servidor.';await load()}
 };
 async function copy(t,b){
   let ok=false;
@@ -281,7 +289,7 @@ async function copy(t,b){
   const s=b.querySelector('span'),o=s.textContent;s.textContent=ok?'Copiado':'No se pudo';setTimeout(()=>{s.textContent=o},1500);
 }
 $('cp').onclick=()=>copy(KEY,$('cp'));
-$('rn').onclick=()=>{clearInterval(tm);KEY=null;LOCKED=false;NOTE='';load()};
+$('rn').onclick=async()=>{clearInterval(tm);NOTE='';try{const r=await fetch('/api/renew',J({k:K,hwid:HW}));const d=await r.json();NOTE=d.error||''}catch(e){NOTE='No se pudo renovar.'}KEY=null;LOCKED=false;await load()};
 document.querySelectorAll('.lg img').forEach(i=>{const bad=()=>i.remove();i.addEventListener('error',bad);if(i.complete&&!i.naturalWidth)bad()});
 paint();
 if(PEND&&PEND.k===K&&PEND.hwid===HW&&PEND.token)complete(PEND.token);else load();
@@ -376,13 +384,16 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 const bg=$('bg'),mn=$('mn'),hm=$('home'),lg=$('lg');
-function tog(on){mn.classList.toggle('on',on);bg.classList.toggle('on',on);bg.setAttribute('aria-expanded',on);if(!on){lg.classList.remove('on');$('ck').classList.remove('on');$('ct').classList.remove('on');hm.style.display='';$('ms').textContent=''}}
+function tog(on){mn.classList.toggle('on',on);bg.classList.toggle('on',on);bg.setAttribute('aria-expanded',on);if(!on){lg.classList.remove('on');$('ck').classList.remove('on');$('ct').classList.remove('on');$('ml').classList.remove('on');hm.style.display='';$('ms').textContent=''}}
 bg.onclick=()=>tog(!mn.classList.contains('on'));
 addEventListener('pointerdown',e=>{if(!mn.contains(e.target)&&!bg.contains(e.target))tog(false)});
 $('goLogin').onclick=()=>{hm.style.display='none';lg.classList.add('on')};
 $('mk').onclick=()=>{hm.style.display='none';$('ck').classList.add('on')};
 $('bk').onclick=()=>{$('ck').classList.remove('on');hm.style.display=''};
 let PV='',N=3;
+let ADM=ls.g('ak_adm')||'',AU=ls.g('ak_adu')||'';
+const AH=()=>({'Content-Type':'application/json',Authorization:'Bearer '+ADM});
+function adminUI(){const on=!!ADM;$('mk').disabled=!on;$('goML').disabled=!on;if(on){document.querySelectorAll('#mk small,#goML small').forEach(x=>x.remove());$('goLogin').lastChild.textContent=AU||'Admin'}}
 const NAMES={linkvertise:'Linkvertise',lootlabs:'Lootlabs',asierkey:'AsierKey'};
 const HOSTS={linkvertise:['linkvertise.com','link-to.net','direct-link.net','up-to-down.net','link-hub.net','link-target.net','link-center.net','link-depot.net','link-spot.net','link-place.net','file-link.net','filemedia.net'],lootlabs:['loot-link.com','loot-links.com','lootlinks.co','lootdest.com','lootdest.org','lootdest.info','lootlabs.gg']};
 const okLink=(p,u)=>{try{const x=new URL(u);if(x.protocol!=='https:')return false;const h=x.hostname.replace(/^www\./,'').toLowerCase();return HOSTS[p].some(d=>h===d||h.endsWith('.'+d))}catch(e){return false}};
@@ -407,8 +418,10 @@ $('mkb').onclick=async()=>{
   if(PV!=='asierkey'){for(let i=1;i<=N;i++){const v=$('lki'+i).value.trim();if(!okLink(PV,v)){$('mm').textContent='El link '+i+' tiene que ser de '+NAMES[PV]+' (empieza por https://).';return}links.push(v)}}
   $('mm').textContent='';
   try{
-    const r=await fetch('/api/create',J({provider:PV,ttl,n:N,links}));
+    const r=await fetch('/api/create',{...J({provider:PV,ttl,n:N,links}),headers:AH()});
     let d={};try{d=await r.json()}catch(e){}
+    if(r.status===401){sess();return}
+    if(!d.id&&r.status<500&&d.error){$('mm').textContent=d.error;return}
     if(!d.id)throw {msg:d.error};
     $('lk').textContent=location.origin+'/?k='+d.id;$('idl').textContent='ID de tu key (para tu script): '+d.id;$('res').style.display='block';
   }catch(e){
@@ -423,8 +436,59 @@ $('mkb').onclick=async()=>{
 };
 $('cl').onclick=()=>copy($('lk').textContent,$('cl'));
 document.querySelectorAll('#ct input').forEach(i=>i.addEventListener('input',()=>{$('mm').textContent=''}));
-$('ent').onclick=()=>{const u=$('u').value.trim();if(!u){$('ms').textContent='Escribe un usuario.';return}
-  $('goLogin').lastChild.textContent=u;$('mk').disabled=false;const s=$('mk').querySelector('small');if(s)s.remove();$('p').value='';tog(false)};
+$('ent').onclick=async()=>{
+  const u=$('u').value.trim(),p=$('p').value;
+  if(!p){$('ms').textContent='Escribe la contraseña.';return}
+  $('ent').disabled=true;$('ms').textContent='';
+  try{
+    const r=await fetch('/api/login',J({u,p}));let d={};try{d=await r.json()}catch(e){}
+    if(!d.token){$('ms').textContent=d.error||'No se pudo iniciar sesión.';return}
+    ADM=d.token;AU=u;ls.s('ak_adm',ADM);ls.s('ak_adu',u);adminUI();$('p').value='';tog(false);
+  }catch(e){$('ms').textContent='No hay servidor /api aquí.'}
+  finally{$('ent').disabled=false}
+};
+function sess(){ADM='';ls.s('ak_adm',null);adminUI();const m='Tu sesión caducó. Vuelve a iniciar sesión desde el menú.';$('mm').textContent=m;$('mlm').textContent=m}
+const fd=s=>s%86400===0?s/86400+'d':s%3600===0?s/3600+'h':Math.round(s/60)+'m';
+function mkBtn(label,icon){const b=document.createElement('button');b.type='button';b.className='kbtn';b.innerHTML=(icon?'<svg class="ic"><use href="#i-'+icon+'"/></svg>':'')+'<span></span>';b.querySelector('span').textContent=label;return b}
+async function loadML(){
+  $('mlm').textContent='Cargando…';$('mll').innerHTML='';
+  try{
+    const r=await fetch('/api/list',{headers:AH()});
+    if(r.status===401){sess();return}
+    const d=await r.json();
+    if(!d.items){$('mlm').textContent=d.error||'No se pudo cargar.';return}
+    $('mlm').textContent=d.items.length?'':'Aún no has creado keys.';
+    d.items.forEach(it=>{
+      const link=location.origin+'/?k='+it.id;
+      const el=document.createElement('div');el.className='mi';
+      const b=document.createElement('b');b.textContent=link;el.appendChild(b);
+      const t=document.createElement('div');t.textContent=NAMES[it.provider]+' · '+it.n+' checkpoint(s) · '+fd(it.ttl)+' · '+it.players+' jugador(es)';el.appendChild(t);
+      const row=document.createElement('div');row.className='krow';
+      const cb=mkBtn('Copiar','copy'),db=mkBtn('Borrar');
+      cb.onclick=()=>copy(link,cb);
+      let armed=false;
+      db.onclick=async()=>{
+        if(!armed){armed=true;db.querySelector('span').textContent='¿Seguro?';setTimeout(()=>{armed=false;db.querySelector('span').textContent='Borrar'},3000);return}
+        db.disabled=true;
+        try{const r2=await fetch('/api/delete',{...J({id:it.id}),headers:AH()});if(r2.status===401){sess();return}if(r2.ok){el.remove();if(!$('mll').children.length)$('mlm').textContent='Aún no has creado keys.'}else{db.disabled=false;db.querySelector('span').textContent='Error'}}catch(e){db.disabled=false}
+      };
+      row.appendChild(cb);row.appendChild(db);el.appendChild(row);$('mll').appendChild(el);
+    });
+    const lg=d.logs||{},rf=lg.ref||[],bp=lg.bypass||[];
+    if(rf.length||bp.length){
+      const el=document.createElement('div');el.className='mi';
+      const b=document.createElement('b');b.textContent='Registro anticheat · origen: '+(lg.mode==='strict'?'estricto':'solo registro');el.appendChild(b);
+      const f=ts=>new Date(ts).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const add=t=>{const x=document.createElement('div');x.textContent=t;el.appendChild(x)};
+      bp.forEach(x=>add(f(x.t)+' · BYPASS · '+x.reason+' · '+String(x.hwid).slice(0,7)+'…'));
+      rf.forEach(x=>add(f(x.t)+' · '+NAMES[x.p]+' · vuelve de '+x.host+(x.ok?' ✓':' ✗')));
+      $('mll').appendChild(el);
+    }
+  }catch(e){$('mlm').textContent='No se pudo cargar.'}
+}
+$('goML').onclick=()=>{hm.style.display='none';$('ml').classList.add('on');loadML()};
+$('bk3').onclick=()=>{$('ml').classList.remove('on');hm.style.display=''};
+adminUI();
 let rs;addEventListener('resize',()=>{clearTimeout(rs);rs=setTimeout(build,150)});
 build();requestAnimationFrame(frame);
 </script>
