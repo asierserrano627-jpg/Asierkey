@@ -20,7 +20,7 @@ const run=async(req,res)=>{
   }
   const code=String(crypto.randomInt(0,1000000)).padStart(6,'0');
   await redis('SET','code:'+email,JSON.stringify({h:sha(code),m:mode}),'EX',600);await redis('DEL','tries:'+email);
-  const m=await mail(email,code);if(!m.ok)return res.status(502).json({error:'No se pudo enviar el correo.'});
+  const m=await mail(email,code);if(!m.ok){let t='';try{t=(await m.json()).message||''}catch(e){}console.error('RESEND',m.status,t);return res.status(502).json({error:'No se pudo enviar el correo. '+t})}
   res.json({ok:true});
 };
 module.exports=async(req,res)=>{try{await run(req,res)}catch(e){console.error('AUTH ERROR',e);res.status(500).json({error:'Error del servidor: '+(e&&e.message||'desconocido')})}};
