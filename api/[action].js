@@ -10,7 +10,8 @@ const rid=n=>crypto.randomBytes(n).toString('hex');
 const bad=(res,m,c=400)=>res.status(c).json({error:m});
 const J=async k=>{const v=await redis('GET',k);return v?JSON.parse(v):null};
 const S=(k,v,ex)=>ex?redis('SET',k,JSON.stringify(v),'EX',ex):redis('SET',k,JSON.stringify(v));
-const log=async(o,l,x)=>{await redis('LPUSH',l+':'+o,JSON.stringify(x));await redis('LTRIM',l+':'+o,0,29)};
+const log=async(o,l,x)=>{await redis('LPUSH',l+':'+o,JSON.stringify(x));await redis('LTRIM',l+':'+o,0,29);
+  if(l==='lbyp'&&E.DISCORD_WEBHOOK)await fetch(E.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'⚠️ Bypass en AsierKey: '+x.reason+' · HWID '+String(x.hwid).slice(0,10)})}).catch(()=>{})};
 const okId=v=>typeof v==='string'&&/^[\w-]{4,64}$/.test(v);
 const who=async req=>{const t=(req.headers.authorization||'').replace('Bearer ','');return /^[0-9a-f]{48}$/.test(t)?redis('GET','adm:'+t):null};
 const H={
@@ -27,14 +28,19 @@ create:async(q,res,me)=>{
   if(!(ttl>=60&&ttl<=2592000)||!(n>=1&&n<=3))return bad(res,'Tiempo o checkpoints no válidos.');
   let L=[];if(provider!=='asierkey'){L=(links||[]).slice(0,n);if(L.length<n||!L.every(u=>okLink(provider,u)))return bad(res,'Links no válidos.')}
   if((await redis('SCARD','own:'+me))>=50)return bad(res,'Máximo 50 links.');
+  const rc=await redis('INCR','rlc:'+me);if(rc===1)await redis('EXPIRE','rlc:'+me,3600);
+  if(rc>10)return bad(res,'Has creado demasiados links seguidos. Espera un rato (máximo 10 por hora).',429);
   const id=rid(5);await S('link:'+id,{id,owner:me,provider,n,ttl,links:L});await redis('SADD','own:'+me,id);res.json({id});
 },
 list:async(q,res,me)=>{
   const ids=(await redis('SMEMBERS','own:'+me))||[],items=[];
   for(const id of ids){const l=await J('link:'+id);if(l)items.push({id,provider:l.provider,n:l.n,ttl:l.ttl,players:await redis('SCARD','players:'+id)})}
   const g=async k=>((await redis('LRANGE',k,0,29))||[]).map(x=>JSON.parse(x));
-  res.json({items,logs:{mode:E.REF_STRICT==='1'?'strict':'log',ref:await g('lref:'+me),bypass:await g('lbyp:'+me)}});
+  const stats={links:items.length,players:items.reduce((a,i)=>a+i.players,0),keys:+(await redis('GET','kc:'+me))||0,bypass:await redis('LLEN','lbyp:'+me)};
+  res.json({items,stats,banned:await redis('SMEMBERS','ban:'+me),logs:{mode:E.REF_STRICT==='1'?'strict':'log',ref:await g('lref:'+me),bypass:await g('lbyp:'+me)}});
 },
+ban:async(q,res,me)=>{const h=(q.body||{}).hwid;if(!okId(h))return bad(res,'HWID no válido.');await redis('SADD','ban:'+me,h);res.json({ok:true})},
+unban:async(q,res,me)=>{const h=(q.body||{}).hwid;if(!okId(h))return bad(res,'HWID no válido.');await redis('SREM','ban:'+me,h);res.json({ok:true})},
 delete:async(q,res,me)=>{
   const id=(q.body||{}).id,l=okId(id)&&await J('link:'+id);
   if(!l||l.owner!==me)return bad(res,'No encontrado.',404);
@@ -49,6 +55,7 @@ status:async(q,res)=>{
 start:async(q,res)=>{
   const {k,hwid,env}=q.body||{},l=okId(k)&&okId(hwid)&&await J('link:'+k);
   if(!l)return bad(res,'Link no válido.');
+  if(await redis('SISMEMBER','ban:'+l.owner,hwid))return bad(res,'Tu dispositivo está bloqueado.',403);
   const s=(await J('ps:'+k+':'+hwid))||{done:0};
   if(s.key)return bad(res,'Ya tienes una key.');
   if(env&&env.wd){await log(l.owner,'lbyp',{t:Date.now(),reason:'webdriver',hwid});return bad(res,'Navegador automatizado no permitido.',403)}
@@ -61,6 +68,7 @@ complete:async(q,res)=>{
   if(!t)return bad(res,'Checkpoint no válido o caducado. Pulsa Open otra vez.');
   await redis('DEL','tok:'+tk); // un solo uso
   const l=await J('link:'+t.k);if(!l)return bad(res,'Link no válido.');
+  if(await redis('SISMEMBER','ban:'+l.owner,t.hwid))return bad(res,'Tu dispositivo está bloqueado.',403);
   const wait=Math.ceil((t.t0+t.min*1000-Date.now())/1000);
   if(wait>0){await log(l.owner,'lbyp',{t:Date.now(),reason:'demasiado rápido',hwid:t.hwid});return res.status(425).json({error:'Checkpoint completado demasiado rápido.',wait})}
   if(t.p!=='asierkey'){
@@ -72,7 +80,7 @@ complete:async(q,res)=>{
   if(s.key)return bad(res,'Ya tienes una key.');
   s.done=Math.min(l.n,s.done+1);
   if(s.done>=l.n){s.key='AK-'+rid(3).toUpperCase()+'-'+rid(3).toUpperCase()+'-'+rid(3).toUpperCase();s.exp=Date.now()+l.ttl*1000;
-    await S('keyidx:'+s.key,{hwid:t.hwid,exp:s.exp},l.ttl+60)}
+    await S('keyidx:'+s.key,{hwid:t.hwid,exp:s.exp},l.ttl+60);await redis('INCR','kc:'+l.owner)}
   await S(sk,s);await redis('SADD','players:'+t.k,t.hwid);res.json({ok:true});
 },
 renew:async(q,res)=>{
