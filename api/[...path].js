@@ -1,15 +1,19 @@
 // AsierKey API (Vercel + Upstash Redis REST)
 // Variables de entorno necesarias en Vercel:
 //   UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN  (base de datos)
-//   ADMIN_PASSWORD                                    (contraseña para crear keys)
+//   ADMIN_PASSWORD                                    (opcional: login de administrador)
 //   ADMIN_USER                                        (opcional: si lo pones, también se exige el usuario)
+//   GOOGLE_CLIENT_ID                                  (opcional: ya viene puesto por defecto abajo)
+// Cualquier persona con sesión (Google o admin) puede crear keys; cada usuario gestiona solo las suyas.
 const crypto = require('crypto');
 
 const RU = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || '').replace(/\/$/, '');
 const RT = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '';
 const HAS = !!(RU && RT);
+const GCLIENT = process.env.GOOGLE_CLIENT_ID || '383654977179-foddamf6uif2dv4fj8fa7b04hmc0ofgc.apps.googleusercontent.com';
 const ST_EX = 3196800; // 37 días: margen sobre el máximo de 30d de una key
-const MAX_KEYS = 500;
+const MAX_KEYS = 500;      // máximo para el admin
+const MAX_USER_KEYS = 20;  // máximo por usuario normal
 const PROVIDERS = ['linkvertise', 'lootlabs', 'asierkey'];
 const HOSTS = {
   linkvertise: ['linkvertise.com', 'link-to.net', 'direct-link.net', 'up-to-down.net', 'link-hub.net', 'link-target.net', 'link-center.net', 'link-depot.net', 'link-spot.net', 'link-place.net', 'file-link.net', 'filemedia.net'],
@@ -71,11 +75,20 @@ function okLink(p, u) {
   } catch (e) { return false; }
 }
 
-async function isAdmin(req) {
+// Usuario de la sesión: { uid, admin, name } o null
+async function getUser(req) {
   const h = req.headers.authorization || '';
   const t = h.startsWith('Bearer ') ? h.slice(7) : '';
-  if (!/^[a-f0-9]{48}$/.test(t)) return false;
-  return !!(await rd(['GET', 'sess:' + t]));
+  if (!/^[a-f0-9]{48}$/.test(t)) return null;
+  const v = await rd(['GET', 'sess:' + t]);
+  if (!v) return null;
+  if (v === '1') return { uid: 'admin', admin: true, name: 'Admin' }; // sesiones antiguas de admin
+  try {
+    const o = JSON.parse(v);
+    if (o && o.admin) return { uid: 'admin', admin: true, name: 'Admin' };
+    if (o && o.uid) return { uid: String(o.uid), admin: false, name: o.name || '' };
+  } catch (e) {}
+  return null;
 }
 
 async function getState(id, hwid) {
@@ -113,28 +126,49 @@ module.exports = async (req, res) => {
     if (route === 'ping') {
       let up = false;
       if (HAS) { try { up = (await rd(['PING'])) === 'PONG'; } catch (e) {} }
-      return out(200, { ok: true, upstash: up, admin: !!process.env.ADMIN_PASSWORD });
+      return out(200, { ok: true, upstash: up, admin: !!process.env.ADMIN_PASSWORD, google: !!GCLIENT });
     }
     if (!HAS) return out(500, { error: 'Falta conectar Upstash (UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN).' });
 
-    // ----- login de administrador -----
+    // ----- login con Google (cualquier cuenta de Google) -----
+    if (route === 'google') {
+      if (needPost()) return;
+      if (!(await rl(req, 'google', 20, 600))) return out(429, { error: 'Demasiados intentos. Espera 10 minutos.' });
+      const cred = String(body.credential || '');
+      if (cred.length < 100 || cred.length > 4096) return out(400, { error: 'Credencial de Google no válida.' });
+      let info = null;
+      try {
+        const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(cred));
+        if (r.ok) info = await r.json();
+      } catch (e) {}
+      const issOk = info && (info.iss === 'accounts.google.com' || info.iss === 'https://accounts.google.com');
+      if (!info || !issOk || info.aud !== GCLIENT || String(info.email_verified) !== 'true' || !info.sub || Number(info.exp) * 1000 < Date.now())
+        return out(401, { error: 'No se pudo verificar tu cuenta de Google.' });
+      const user = { uid: 'g:' + info.sub, name: String(info.name || info.email || 'Usuario').slice(0, 60), email: String(info.email || '') };
+      const token = hex(24);
+      await rd(['SET', 'sess:' + token, JSON.stringify(user), 'EX', 604800]); // 7 días
+      return out(200, { token, name: user.name, email: user.email });
+    }
+
+    // ----- login de administrador (usuario/contraseña) -----
     if (route === 'login') {
       if (needPost()) return;
       const pw = process.env.ADMIN_PASSWORD;
-      if (!pw) return out(500, { error: 'Falta la variable ADMIN_PASSWORD en Vercel.' });
+      if (!pw) return out(500, { error: 'El login de administrador no está activado. Entra con Google.' });
       if (!(await rl(req, 'login', 5, 600))) return out(429, { error: 'Demasiados intentos. Espera 10 minutos.' });
       const okU = process.env.ADMIN_USER ? same(body.u || '', process.env.ADMIN_USER) : true;
       const okP = same(body.p || '', pw);
       if (!(okU && okP)) return out(401, { error: 'Usuario o contraseña incorrectos.' });
       const token = hex(24);
-      await rd(['SET', 'sess:' + token, '1', 'EX', 43200]);
+      await rd(['SET', 'sess:' + token, JSON.stringify({ admin: true }), 'EX', 43200]);
       return out(200, { token });
     }
 
-    // ----- crear key (solo admin) -----
+    // ----- crear key (cualquier usuario con sesión) -----
     if (route === 'create') {
       if (needPost()) return;
-      if (!(await isAdmin(req))) return out(401, { error: 'Necesitas iniciar sesión.' });
+      const user = await getUser(req);
+      if (!user) return out(401, { error: 'Necesitas iniciar sesión.' });
       if (!(await rl(req, 'create', 30, 3600))) return TOO();
       const provider = String(body.provider || '');
       if (!PROVIDERS.includes(provider)) return out(400, { error: 'Proveedor no válido.' });
@@ -151,20 +185,29 @@ module.exports = async (req, res) => {
           links.push(v);
         }
       }
-      if ((await rd(['SCARD', 'keys:list'])) >= MAX_KEYS) return out(400, { error: 'Has llegado al máximo de ' + MAX_KEYS + ' keys. Borra alguna en Mis links.' });
+      const max = user.admin ? MAX_KEYS : MAX_USER_KEYS;
+      if ((await rd(['SCARD', 'owner:' + user.uid])) >= max) return out(400, { error: 'Has llegado al máximo de ' + max + ' keys. Borra alguna en Mis links.' });
       const id = hex(5);
-      await pipe([['SET', 'key:' + id, JSON.stringify({ id, provider, ttl, n, links, created: Date.now() })], ['SADD', 'keys:list', id]]);
+      await pipe([
+        ['SET', 'key:' + id, JSON.stringify({ id, provider, ttl, n, links, created: Date.now(), owner: user.uid })],
+        ['SADD', 'keys:list', id],
+        ['SADD', 'owner:' + user.uid, id]
+      ]);
       return out(200, { id });
     }
 
-    // ----- Mis links (solo admin) -----
+    // ----- Mis links (cada usuario ve las suyas; el admin ve todas) -----
     if (route === 'list') {
-      if (!(await isAdmin(req))) return out(401, { error: 'Necesitas iniciar sesión.' });
+      const user = await getUser(req);
+      if (!user) return out(401, { error: 'Necesitas iniciar sesión.' });
       if (!(await rl(req, 'list', 60, 60))) return TOO();
-      const lg = await pipe([['LRANGE', 'log:ref', 0, 9], ['LRANGE', 'log:bypass', 0, 9]]);
-      const pj = a => (a || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean);
-      const logs = { ref: pj(lg[0]), bypass: pj(lg[1]), mode: REF_MODE };
-      const ids = (await rd(['SMEMBERS', 'keys:list'])) || [];
+      let logs = {};
+      if (user.admin) {
+        const lg = await pipe([['LRANGE', 'log:ref', 0, 9], ['LRANGE', 'log:bypass', 0, 9]]);
+        const pj = a => (a || []).map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean);
+        logs = { ref: pj(lg[0]), bypass: pj(lg[1]), mode: REF_MODE };
+      }
+      const ids = (await rd(['SMEMBERS', user.admin ? 'keys:list' : 'owner:' + user.uid])) || [];
       if (!ids.length) return out(200, { items: [], logs });
       const cmds = [];
       ids.forEach(id => { cmds.push(['GET', 'key:' + id]); cmds.push(['SCARD', 'pl:' + id]); });
@@ -174,19 +217,28 @@ module.exports = async (req, res) => {
         let c = null; try { c = r[i * 2] ? JSON.parse(r[i * 2]) : null; } catch (e) {}
         if (!c) dead.push(id); else items.push({ id, provider: c.provider, ttl: c.ttl, n: c.n, created: c.created, players: r[i * 2 + 1] || 0 });
       });
-      if (dead.length) await rd(['SREM', 'keys:list', ...dead]);
+      if (dead.length) {
+        await rd(['SREM', 'keys:list', ...dead]);
+        if (!user.admin) await rd(['SREM', 'owner:' + user.uid, ...dead]);
+      }
       items.sort((a, b) => b.created - a.created);
       return out(200, { items, logs });
     }
 
-    // ----- borrar / revocar (solo admin) -----
+    // ----- borrar / revocar (el dueño de la key o el admin) -----
     if (route === 'delete') {
       if (needPost()) return;
-      if (!(await isAdmin(req))) return out(401, { error: 'Necesitas iniciar sesión.' });
+      const user = await getUser(req);
+      if (!user) return out(401, { error: 'Necesitas iniciar sesión.' });
       if (!(await rl(req, 'delete', 60, 60))) return TOO();
       const id = String(body.id || '');
       if (!OKID(id)) return out(400, { error: 'ID no válido.' });
-      await pipe([['DEL', 'key:' + id], ['SREM', 'keys:list', id], ['DEL', 'pl:' + id]]);
+      const cfg = await getj('key:' + id);
+      if (cfg && !user.admin && cfg.owner !== user.uid) return out(403, { error: 'Esta key no es tuya.' });
+      const cmds = [['DEL', 'key:' + id], ['SREM', 'keys:list', id], ['DEL', 'pl:' + id]];
+      if (cfg && cfg.owner) cmds.push(['SREM', 'owner:' + cfg.owner, id]);
+      if (!user.admin) cmds.push(['SREM', 'owner:' + user.uid, id]);
+      await pipe(cmds);
       return out(200, { ok: true });
     }
 
