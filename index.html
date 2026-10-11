@@ -111,6 +111,39 @@ input{user-select:text;-webkit-user-select:text}
 .mi{padding:10px;margin-bottom:8px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:.8rem;color:rgba(235,240,255,.8)}
 .mi b{display:block;font-size:.84rem;margin-bottom:3px;color:#fff;word-break:break-all}
 .mi .krow{margin-top:8px}
+
+/* auth */
+.ui{display:none}body.hasK .ui{display:flex}
+.au{position:fixed;inset:0;z-index:3;display:none;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 76px) 16px calc(env(safe-area-inset-bottom,0px) + 24px);overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
+.ac{width:min(100%,420px);margin:auto 0;padding:26px 22px;border-radius:26px;background:linear-gradient(160deg,rgba(28,26,70,.72),rgba(8,10,24,.8));border:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 20px 80px rgba(0,0,0,.65),0 0 50px rgba(120,100,255,.18);animation:up .9s ease both}
+.ac .br{font-family:Orbitron,Outfit,sans-serif;text-align:center;font-size:1.7rem;font-weight:900;letter-spacing:.1em;background:linear-gradient(180deg,#fff 30%,#b9a8ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 16px rgba(150,130,255,.6))}
+.ac h2{margin:14px 0 4px;text-align:center;font-size:1.15rem}
+.ac .msg{text-align:center}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:16px 0;padding:5px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.tabs button{padding:10px;border:0;border-radius:10px;background:none;color:rgba(235,240,255,.7);font-weight:600;cursor:pointer;transition:.25s}
+.tabs button.on{background:rgba(255,255,255,.14);color:#fff;box-shadow:0 0 16px rgba(160,140,255,.25)}
+.gl{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:12px;height:54px;border-radius:16px;cursor:pointer;color:#1b1b2f;font-weight:700;font-size:1rem;letter-spacing:.02em;background:linear-gradient(180deg,#fff,#f1eefc 60%,#e6e0fa);border:1px solid rgba(255,255,255,.9);box-shadow:0 8px 28px rgba(255,255,255,.18),0 2px 0 #fff inset,0 -3px 8px rgba(120,100,200,.18) inset,0 0 0 4px rgba(255,255,255,.06);transition:transform .2s,box-shadow .3s}
+.gl:hover{transform:translateY(-2px);box-shadow:0 12px 38px rgba(255,255,255,.35),0 2px 0 #fff inset,0 -3px 8px rgba(120,100,200,.18) inset,0 0 0 4px rgba(255,255,255,.1)}
+.gl:active{transform:scale(.98)}
+.gl::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.95) 50%,transparent 65%);background-size:260% 100%;background-position:160% 0;animation:sheen 4.2s ease-in-out infinite;mix-blend-mode:overlay}
+.gl svg{width:24px;height:24px;flex:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2))}
+.gl>*{pointer-events:none}
+#gbtn{position:absolute;inset:0;z-index:2;opacity:.01;overflow:hidden;pointer-events:auto!important}
+.or{display:flex;align-items:center;gap:10px;margin:16px 0 4px;font-size:.74rem;color:rgba(230,235,255,.55);text-transform:uppercase;letter-spacing:.1em}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.ac input{width:100%;padding:13px;margin-bottom:4px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:#fff;font-size:1rem}
+.ac input:focus{border-color:rgba(160,140,255,.85);box-shadow:0 0 0 3px rgba(160,140,255,.2)}
+.pw{position:relative}.pw input{padding-right:48px}
+.pw button{position:absolute;right:6px;top:4px;width:40px;height:40px;border:0;background:none;color:#fff;opacity:.7;cursor:pointer;font-size:1.1rem}
+.str{height:5px;border-radius:5px;background:rgba(255,255,255,.1);margin:6px 0 14px;overflow:hidden}
+.str i{display:block;height:100%;width:0;border-radius:5px;transition:width .3s,background .3s}
+.ac .go{margin-top:6px;height:50px;font-size:1rem;letter-spacing:.04em}
+.dc{width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1px dashed var(--line);background:none;color:rgba(235,240,255,.5);font-size:.9rem}
+.cd6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:18px 0 8px}
+.cd6 input{padding:0;height:56px;text-align:center;font-family:Orbitron,Outfit,sans-serif;font-size:1.4rem;margin:0}
+.lnk{background:none;border:0;color:#cfc4ff;font-weight:600;cursor:pointer;padding:6px}
+.lnk:disabled{opacity:.5;cursor:default}
+.dash .go{margin-bottom:10px}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -126,14 +159,6 @@ input{user-select:text;-webkit-user-select:text}
     <button class="item" id="goML" type="button" disabled><svg class="ic"><use href="#i-list"/></svg>Mis links <small>Requiere login</small></button>
     <button class="item" type="button" disabled><svg class="ic"><use href="#i-set"/></svg>Ajustes <small>Pronto</small></button>
     <p class="msg">Tu HWID: <b id="hw"></b></p>
-  </div>
-  <div class="login" id="lg">
-    <h2>INICIAR SESIÓN</h2>
-    <input id="u" placeholder="Usuario" autocomplete="username">
-    <input id="p" type="password" placeholder="Contraseña" autocomplete="current-password">
-    <button class="go" id="ent" type="button">Entrar</button>
-    <div id="gwrap" style="display:none;margin-top:12px"><p class="msg" style="text-align:center;margin:0 0 8px">o</p><div id="gbtn" style="display:flex;justify-content:center"></div></div>
-    <p class="msg" id="ms" style="color:#ffb4b4"></p>
   </div>
   <div class="login" id="ck">
     <button class="back" id="bk" type="button"><svg class="ic"><use href="#i-back"/></svg>Volver</button>
@@ -194,6 +219,38 @@ input{user-select:text;-webkit-user-select:text}
     <button class="go" id="rc" type="button" disabled>Continuar</button>
   </div>
 </div>
+<section class="au" id="au"><div class="ac">
+ <div class="br">AsierKey</div>
+ <div id="a1">
+  <h2 id="at">Bienvenido de nuevo</h2><p class="msg" id="as">Inicia sesión para crear y gestionar tus keys.</p>
+  <div class="tabs"><button type="button" data-m="login" class="on">Iniciar sesión</button><button type="button" data-m="register">Registrarme</button></div>
+  <div class="gl" id="gl"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg><span>Continuar con Google</span><div id="gbtn"></div></div>
+  <div class="or">o con tu correo</div>
+  <label class="fl" for="em">Correo electrónico</label>
+  <input id="em" type="email" inputmode="email" autocomplete="email" placeholder="tucorreo@ejemplo.com">
+  <label class="fl" for="pw">Contraseña</label>
+  <div class="pw"><input id="pw" type="password" autocomplete="current-password" placeholder="Tu contraseña"><button type="button" id="eye" aria-label="Mostrar contraseña">&#128065;</button></div>
+  <div class="str" id="strw" style="display:none"><i id="str"></i></div>
+  <button class="go" id="cont" type="button">Continuar</button>
+  <button class="dc" type="button" disabled>Discord · Próximamente</button>
+  <p class="msg" id="am" style="color:#ffb4b4"></p>
+ </div>
+ <div id="a2" style="display:none">
+  <button class="back" id="abk" type="button"><svg class="ic"><use href="#i-back"/></svg>Volver</button>
+  <h2>Revisa tu correo</h2>
+  <p class="msg">Te enviamos un código de 6 dígitos a <b id="sent"></b>. Caduca en 10 minutos.</p>
+  <div class="cd6" id="cd6"></div>
+  <button class="go" id="vf" type="button">Verificar y continuar</button>
+  <p class="msg"><button class="lnk" id="rs2" type="button">Reenviar código</button></p>
+  <p class="msg" id="vm" style="color:#ffb4b4"></p>
+ </div>
+</div></section>
+<section class="au dash" id="dash"><div class="ac">
+ <div class="br">AsierKey</div><h2 id="dh">Panel</h2><p class="msg" style="margin-bottom:16px">¿Qué quieres hacer hoy?</p>
+ <button class="go" id="dk" type="button">Crear key</button>
+ <button class="kbtn" id="dl" type="button" style="width:100%;margin-bottom:10px">Mis links</button>
+ <button class="kbtn" id="dx" type="button" style="width:100%">Cerrar sesión</button>
+</div></section>
 <main class="ui">
   <header><h1>AsierKey</h1><p>Completa los checkpoints para conseguir tu key</p></header>
   <section class="panel">
@@ -235,6 +292,7 @@ function mkHW(){
 let HW=Q.get('hwid')||mkHW(),K=Q.get('k')||'',PEND=null;
 try{PEND=JSON.parse(ls.g('ak_pending')||'null')}catch(e){}
 if(PEND&&!K){K=PEND.k;HW=PEND.hwid}
+if(K)document.body.classList.add('hasK');
 let TOTAL=3,DONE=0,KEY=null,LOCKED=false,EXP=0,tm=null,NOTE='';
 const J=o=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});
 const fmt=s=>{s=Math.max(0,s|0);const d=(s/86400)|0,h=((s%86400)/3600)|0,m=((s%3600)/60)|0,x=s%60,p=n=>String(n).padStart(2,'0');return (d?d+'d ':'')+p(h)+':'+p(m)+':'+p(x)};
@@ -385,17 +443,17 @@ function frame(t){
   }
   requestAnimationFrame(frame);
 }
-const bg=$('bg'),mn=$('mn'),hm=$('home'),lg=$('lg');
-function tog(on){mn.classList.toggle('on',on);bg.classList.toggle('on',on);bg.setAttribute('aria-expanded',on);if(!on){lg.classList.remove('on');$('ck').classList.remove('on');$('ct').classList.remove('on');$('ml').classList.remove('on');hm.style.display='';$('ms').textContent=''}}
+const bg=$('bg'),mn=$('mn'),hm=$('home');
+function tog(on){mn.classList.toggle('on',on);bg.classList.toggle('on',on);bg.setAttribute('aria-expanded',on);if(!on){$('ck').classList.remove('on');$('ct').classList.remove('on');$('ml').classList.remove('on');hm.style.display=''}}
 bg.onclick=()=>tog(!mn.classList.contains('on'));
 addEventListener('pointerdown',e=>{if(!mn.contains(e.target)&&!bg.contains(e.target))tog(false)});
-$('goLogin').onclick=()=>{hm.style.display='none';lg.classList.add('on')};
+$('goLogin').onclick=()=>{if(ADM){logout();return}tog(false);view()};
 $('mk').onclick=()=>{hm.style.display='none';$('ck').classList.add('on')};
 $('bk').onclick=()=>{$('ck').classList.remove('on');hm.style.display=''};
 let PV='',N=3;
 let ADM=ls.g('ak_adm')||'',AU=ls.g('ak_adu')||'';
 const AH=()=>({'Content-Type':'application/json',Authorization:'Bearer '+ADM});
-function adminUI(){const on=!!ADM;$('mk').disabled=!on;$('goML').disabled=!on;if(on){document.querySelectorAll('#mk small,#goML small').forEach(x=>x.remove());$('goLogin').lastChild.textContent=AU||'Admin'}}
+function adminUI(){const on=!!ADM;setTimeout(view,0);$('mk').disabled=!on;$('goML').disabled=!on;if(on){document.querySelectorAll('#mk small,#goML small').forEach(x=>x.remove());$('goLogin').lastChild.textContent=AU||'Admin'}}
 const NAMES={linkvertise:'Linkvertise',lootlabs:'Lootlabs',asierkey:'AsierKey'};
 const HOSTS={linkvertise:['linkvertise.com','link-to.net','direct-link.net','up-to-down.net','link-hub.net','link-target.net','link-center.net','link-depot.net','link-spot.net','link-place.net','file-link.net','filemedia.net'],lootlabs:['loot-link.com','loot-links.com','lootlinks.co','lootdest.com','lootdest.org','lootdest.info','lootlabs.gg']};
 const okLink=(p,u)=>{try{const x=new URL(u);if(x.protocol!=='https:')return false;const h=x.hostname.replace(/^www\./,'').toLowerCase();return HOSTS[p].some(d=>h===d||h.endsWith('.'+d))}catch(e){return false}};
@@ -438,34 +496,66 @@ $('mkb').onclick=async()=>{
 };
 $('cl').onclick=()=>copy($('lk').textContent,$('cl'));
 document.querySelectorAll('#ct input').forEach(i=>i.addEventListener('input',()=>{$('mm').textContent=''}));
-$('ent').onclick=async()=>{
-  const u=$('u').value.trim(),p=$('p').value;
-  if(!p){$('ms').textContent='Escribe la contraseña.';return}
-  $('ent').disabled=true;$('ms').textContent='';
-  try{
-    const r=await fetch('/api/login',J({u,p}));let d={};try{d=await r.json()}catch(e){}
-    if(!d.token){$('ms').textContent=d.error||'No se pudo iniciar sesión.';return}
-    ADM=d.token;AU=u;ls.s('ak_adm',ADM);ls.s('ak_adu',u);adminUI();$('p').value='';tog(false);
-  }catch(e){$('ms').textContent='No hay servidor /api aquí.'}
-  finally{$('ent').disabled=false}
+let AM='login',EMV='',PWV='',cool=0;
+const MAILRE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function view(){$('au').style.display=(!ADM&&!K)?'flex':'none';$('dash').style.display=(ADM&&!K)?'flex':'none';if(ADM)$('dh').textContent='Hola, '+(AU||'')}
+function logout(){ADM='';AU='';ls.s('ak_adm',null);ls.s('ak_adu',null);$('goLogin').lastChild.textContent='Iniciar sesión';adminUI();tog(false)}
+function setMode(m){AM=m;document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  const r=m==='register';$('at').textContent=r?'Crea tu cuenta':'Bienvenido de nuevo';$('as').textContent=r?'Regístrate con tu correo y te enviaremos un código.':'Inicia sesión para crear y gestionar tus keys.';
+  $('strw').style.display=r?'block':'none';$('pw').autocomplete=r?'new-password':'current-password';$('am').textContent=''}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+$('eye').onclick=()=>{$('pw').type=$('pw').type==='password'?'text':'password'};
+$('pw').addEventListener('input',()=>{const v=$('pw').value;let n=0;if(v.length>=8)n++;if(v.length>=12)n++;if(/[A-Z]/.test(v)&&/[a-z]/.test(v))n++;if(/\d/.test(v))n++;if(/[^\w\s]/.test(v))n++;
+  $('str').style.width=n*20+'%';$('str').style.background=n<=2?'#f87171':n<=3?'#fbbf24':'#4ade80'});
+for(let i=0;i<6;i++){const x=document.createElement('input');x.inputMode='numeric';x.maxLength=1;x.autocomplete=i?'off':'one-time-code';$('cd6').appendChild(x)}
+const CI=[...document.querySelectorAll('#cd6 input')];
+CI.forEach((x,i)=>{x.addEventListener('input',()=>{x.value=x.value.replace(/\D/g,'');if(x.value&&CI[i+1])CI[i+1].focus();if(CI.every(c=>c.value))$('vf').click()});
+  x.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!x.value&&CI[i-1])CI[i-1].focus()});
+  x.addEventListener('paste',e=>{const t=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);if(!t)return;e.preventDefault();[...t].forEach((c,j)=>CI[j].value=c);CI[Math.min(t.length,5)].focus()})});
+function coolTick(){clearInterval(cool);let n=45;const b=$('rs2');b.disabled=true;cool=setInterval(()=>{n--;b.textContent=n>0?'Reenviar código ('+n+'s)':'Reenviar código';if(n<=0){clearInterval(cool);b.disabled=false}},1000);b.textContent='Reenviar código (45s)'}
+async function sendCode(){
+  const r=await fetch('/api/auth',J({mode:AM,email:EMV,password:PWV}));let d={};try{d=await r.json()}catch(e){}
+  if(!r.ok||!d.ok)throw d.error||'No se pudo enviar el código.';
+}
+$('cont').onclick=async()=>{
+  const e=$('em').value.trim().toLowerCase(),p=$('pw').value;
+  if(!MAILRE.test(e)){$('am').textContent='Escribe un correo válido.';return}
+  if(AM==='register'&&p.length<8){$('am').textContent='La contraseña debe tener al menos 8 caracteres.';return}
+  if(!p){$('am').textContent='Escribe tu contraseña.';return}
+  EMV=e;PWV=p;$('cont').disabled=true;$('am').textContent='';
+  try{await sendCode();$('sent').textContent=e;$('a1').style.display='none';$('a2').style.display='block';$('vm').textContent='';CI.forEach(c=>c.value='');CI[0].focus();coolTick()}
+  catch(x){$('am').textContent=typeof x==='string'?x:'No hay servidor /api aquí.'}
+  finally{$('cont').disabled=false}
 };
+$('pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('cont').click()});
+$('abk').onclick=()=>{$('a2').style.display='none';$('a1').style.display='block'};
+$('rs2').onclick=async()=>{try{await sendCode();$('vm').style.color='#bbf7d0';$('vm').textContent='Código reenviado.';coolTick()}catch(x){$('vm').style.color='#ffb4b4';$('vm').textContent=typeof x==='string'?x:'No se pudo reenviar.'}};
+$('vf').onclick=async()=>{
+  const c=CI.map(x=>x.value).join('');$('vm').style.color='#ffb4b4';
+  if(c.length<6){$('vm').textContent='Escribe los 6 dígitos.';return}
+  $('vf').disabled=true;$('vm').textContent='';
+  try{const r=await fetch('/api/verify',J({email:EMV,code:c}));let d={};try{d=await r.json()}catch(e){}
+    if(!d.token){$('vm').textContent=d.error||'Código incorrecto.';return}
+    ADM=d.token;AU=d.name||EMV;ls.s('ak_adm',ADM);ls.s('ak_adu',AU);PWV='';$('pw').value='';$('a2').style.display='none';$('a1').style.display='block';adminUI()}
+  catch(e){$('vm').textContent='No hay servidor /api aquí.'}
+  finally{$('vf').disabled=false}
+};
+$('dk').onclick=()=>{tog(true);$('mk').click()};$('dl').onclick=()=>{tog(true);$('goML').click()};$('dx').onclick=logout;
 const GOOGLE_CLIENT_ID='383654977179-foddamf6uif2dv4fj8fa7b04hmc0ofgc.apps.googleusercontent.com';
 async function onGoogle(resp){
-  $('ms').textContent='';
+  $('am').textContent='';
   try{
     const r=await fetch('/api/google',J({credential:resp.credential}));let d={};try{d=await r.json()}catch(e){}
-    if(!d.token){$('ms').textContent=d.error||'No se pudo entrar con Google.';return}
-    ADM=d.token;AU=d.name||d.email||'Google';ls.s('ak_adm',ADM);ls.s('ak_adu',AU);adminUI();tog(false);
-  }catch(e){$('ms').textContent='No hay servidor /api aquí.'}
+    if(!d.token){$('am').textContent=d.error||'No se pudo entrar con Google.';return}
+    ADM=d.token;AU=d.name||d.email||'Google';ls.s('ak_adm',ADM);ls.s('ak_adu',AU);adminUI();
+  }catch(e){$('am').textContent='No hay servidor /api aquí.'}
 }
 function initGoogle(){
-  if(!GOOGLE_CLIENT_ID||GOOGLE_CLIENT_ID.startsWith('PON_AQUI'))return;
   if(!window.google||!google.accounts){setTimeout(initGoogle,300);return}
   google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogle});
-  google.accounts.id.renderButton($('gbtn'),{theme:'filled_black',size:'large',shape:'pill',text:'continue_with',width:260});
-  $('gwrap').style.display='block';
+  google.accounts.id.renderButton($('gbtn'),{theme:'outline',size:'large',type:'standard',width:Math.min(400,Math.max(200,$('gl').offsetWidth||320))});
 }
-initGoogle();
+initGoogle();view();
 function sess(){ADM='';ls.s('ak_adm',null);adminUI();const m='Tu sesión caducó. Vuelve a iniciar sesión desde el menú.';$('mm').textContent=m;$('mlm').textContent=m}
 const fd=s=>s%86400===0?s/86400+'d':s%3600===0?s/3600+'h':Math.round(s/60)+'m';
 function mkBtn(label,icon){const b=document.createElement('button');b.type='button';b.className='kbtn';b.innerHTML=(icon?'<svg class="ic"><use href="#i-'+icon+'"/></svg>':'')+'<span></span>';b.querySelector('span').textContent=label;return b}
