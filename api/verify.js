@@ -1,6 +1,6 @@
 // POST /api/verify {email, code} -> {token,name}
 const {crypto,redis,sha,same}=require('./_lib');
-module.exports=async(req,res)=>{
+const run=async(req,res)=>{
   if(req.method!=='POST')return res.status(405).json({error:'Método no permitido'});
   const email=String((req.body||{}).email||'').trim().toLowerCase(),code=String((req.body||{}).code||'');
   const t=await redis('INCR','tries:'+email);await redis('EXPIRE','tries:'+email,600);
@@ -13,3 +13,4 @@ module.exports=async(req,res)=>{
   await redis('SET','adm:'+token,email,'EX',2592000); // ⚠️ usa el MISMO formato que tu /api/login actual
   res.json({token,name:email});
 };
+module.exports=async(req,res)=>{try{await run(req,res)}catch(e){console.error('AUTH ERROR',e);res.status(500).json({error:'Error del servidor: '+(e&&e.message||'desconocido')})}};
