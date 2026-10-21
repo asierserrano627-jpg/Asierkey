@@ -89,9 +89,9 @@ renew:async(q,res)=>{
   if(s&&s.key&&s.exp>Date.now())return bad(res,'Tu key aún no caduca.');
   await redis('DEL','ps:'+k+':'+hwid);res.json({ok:true});
 },
-check:async(q,res)=>{ // para tu script: GET /api/check?key=AK-...&hwid=...
+check:async(q,res)=>{ // para tu script: GET /api/check?key=AK-...&hwid=... (hwid opcional)
   const {key,hwid}=q.query,x=okId(key)&&await J('keyidx:'+key);
-  res.json({valid:!!(x&&x.hwid===hwid&&x.exp>Date.now()),expiresIn:x?Math.max(0,Math.round((x.exp-Date.now())/1000)):0});
+  res.json({valid:!!(x&&(!hwid||x.hwid===hwid)&&x.exp>Date.now()),expiresIn:x?Math.max(0,Math.round((x.exp-Date.now())/1000)):0});
 }};
 const PUB=['ping','google','status','start','complete','renew','check'];
 module.exports=async(req,res)=>{try{
