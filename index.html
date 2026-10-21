@@ -992,14 +992,15 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){last=0;re
 (()=>{
  const $=id=>document.getElementById(id);const home=$('home');if(!home)return;
  const panels=[...document.querySelectorAll('.extra-panel')];
- function showExtra(name){panels.forEach(p=>p.classList.toggle('on',p.id==='extra-'+name));home.style.display='none';document.querySelectorAll('#mn .login').forEach(p=>p.classList.remove('on'));if(name==='profile')syncPrefs();portal();}
- function backExtra(){panels.forEach(p=>p.classList.remove('on'));home.style.display='';}
+ function setHome(show){[...home.children].forEach(c=>{if(!c.classList.contains('extra-panel'))c.style.display=show?'':'none'})}
+ function showExtra(name){panels.forEach(p=>p.classList.toggle('on',p.id==='extra-'+name));setHome(false);document.querySelectorAll('#mn .login').forEach(p=>p.classList.remove('on'));if(name==='profile')syncPrefs();portal();}
+ function backExtra(){panels.forEach(p=>p.classList.remove('on'));setHome(true);}
  function portal(){const f=$('akPortalFlash');if(!f||document.body.classList.contains('ak-lite-effects')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;f.classList.add('go');setTimeout(()=>f.classList.remove('go'),220)}
  document.querySelectorAll('[data-extra]').forEach(b=>b.addEventListener('click',()=>showExtra(b.dataset.extra)));
  document.querySelectorAll('[data-extraback]').forEach(b=>b.addEventListener('click',backExtra));
- $('extraCreate')?.addEventListener('click',()=>{$('mk').click();panels.forEach(p=>p.classList.remove('on'));home.style.display=''});
- $('extraLinks')?.addEventListener('click',()=>{$('goML').click();panels.forEach(p=>p.classList.remove('on'));home.style.display=''});
- $('extraProfileSettings')?.addEventListener('click',()=>{$('goSettings').click();panels.forEach(p=>p.classList.remove('on'));home.style.display=''});
+ $('extraCreate')?.addEventListener('click',()=>{$('mk').click();panels.forEach(p=>p.classList.remove('on'));setHome(true)});
+ $('extraLinks')?.addEventListener('click',()=>{$('goML').click();panels.forEach(p=>p.classList.remove('on'));setHome(true)});
+ $('extraProfileSettings')?.addEventListener('click',()=>{$('goSettings').click();panels.forEach(p=>p.classList.remove('on'));setHome(true)});
  $('extraProfileKeys')?.addEventListener('click',()=>showExtra('keys'));
  function unread(v){try{localStorage.setItem('ak_notif_read',v?'1':'0')}catch(e){}const b=$('akUnread');if(b){b.textContent=v?'0':'2';b.style.display=v?'none':''}}
  let read=false;try{read=localStorage.getItem('ak_notif_read')==='1'}catch(e){}unread(read);
