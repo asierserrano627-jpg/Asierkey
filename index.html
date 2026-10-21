@@ -631,6 +631,7 @@ local YOUTUBE_LINK = ${luaQ(o.yt)}
 local DISCORD_ICON = ${luaQ(DISCORD_ICON_URL)}
 local YOUTUBE_ICON = ${luaQ(YOUTUBE_ICON_URL)}
 local SCRIPT = ${luaQ(o.script)}
+local GET_KEY_URL = ${luaQ(o.getKey)}
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -701,7 +702,7 @@ end
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Position = UDim2.fromScale(0.5, 0.5)
-panel.Size = UDim2.fromOffset(360, 290)
+panel.Size = UDim2.fromOffset(360, 320)
 panel.BackgroundColor3 = Color3.fromRGB(14, 16, 34)
 panel.BackgroundTransparency = 0.12
 panel.BorderSizePixel = 0
@@ -811,6 +812,21 @@ if YOUTUBE_LINK ~= "" then
   iconButton(UDim2.new(0.5, 95, 0, 205), "YT", YOUTUBE_LINK, YOUTUBE_ICON)
 end
 
+local getKeyBtn = styleButton(Instance.new("TextButton"), "Get Key")
+getKeyBtn.Size = UDim2.new(0.84, 0, 0, 40)
+getKeyBtn.Position = UDim2.new(0.08, 0, 0, 252)
+getKeyBtn.BackgroundColor3 = Color3.fromRGB(34, 197, 94)
+getKeyBtn.TextColor3 = Color3.fromRGB(4, 33, 15)
+getKeyBtn.MouseButton1Click:Connect(function()
+  if GET_KEY_URL ~= "" then
+    if setclipboard then setclipboard(GET_KEY_URL) end
+    status.Text = "Get Key link copied - open it in your browser"
+    status.TextColor3 = Color3.fromRGB(200, 205, 240)
+  end
+end)
+getKeyBtn.MouseEnter:Connect(function() TweenService:Create(getKeyBtn, TI, {BackgroundColor3 = Color3.fromRGB(74, 222, 128)}):Play() end)
+getKeyBtn.MouseLeave:Connect(function() TweenService:Create(getKeyBtn, TI, {BackgroundColor3 = Color3.fromRGB(34, 197, 94)}):Play() end)
+
 local function verify(key)
   local okGet, body = pcall(function()
     return game:HttpGet(API .. "/api/check?key=" .. HttpService:UrlEncode(key))
@@ -854,9 +870,9 @@ box.FocusLost:Connect(function(enter) if enter then doCheck() end end)
 
 -- Visual polish: smooth entrance, focus glow, button hover
 local TI = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-panel.Size = UDim2.fromOffset(340, 270)
+panel.Size = UDim2.fromOffset(340, 300)
 panel.BackgroundTransparency = 1
-TweenService:Create(panel, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(360, 290), BackgroundTransparency = 0.12}):Play()
+TweenService:Create(panel, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(360, 320), BackgroundTransparency = 0.12}):Play()
 box.Focused:Connect(function() TweenService:Create(boxStroke, TI, {Color = Color3.fromRGB(170, 150, 255), Thickness = 2}):Play() end)
 box.FocusLost:Connect(function() TweenService:Create(boxStroke, TI, {Color = Color3.fromRGB(110, 100, 200), Thickness = 1}):Play() end)
 checkBtn.MouseEnter:Connect(function() TweenService:Create(checkBtn, TI, {BackgroundColor3 = Color3.fromRGB(110, 92, 230)}):Play() end)
@@ -880,7 +896,7 @@ $('fgen').onclick=async()=>{
   }
   if(!src.trim())return msg('Pega tu script o un link Raw.');
   if(/^\s*<(!doctype|html)/i.test(src))return msg('Eso es una página web, no un script. Usa el link Raw.');
-  $('fcode').textContent=buildLoader({script:src,dc,yt});
+  $('fcode').textContent=buildLoader({script:src,dc,yt,getKey:$('lk').textContent});
   $('fout').style.display='block';
 };
 $('fcp').onclick=()=>copy($('fcode').textContent,$('fcp'));
@@ -982,7 +998,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){last=0;re
 
 // Presentación espacial, temas, buscador y modo de rendimiento.
 (()=>{
- const w=document.getElementById('welcomeAK');if(!w)return;
+ const w=document.getElementById('welcomeAK');if(!w)return;if(K){w.style.display='none';const b=document.getElementById('bg');if(b)b.style.display='none'}
  const enter=()=>{w.style.display='none';try{sessionStorage.setItem('akWelcomeSeen','1')}catch(e){}};
  ['akEnterTop','akEnter','akEnterBottom'].forEach(id=>{const b=document.getElementById(id);if(b)b.addEventListener('click',enter)});
  const learn=document.getElementById('akLearn');if(learn)learn.addEventListener('click',()=>document.getElementById('akFeatures').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
