@@ -291,10 +291,8 @@ input{user-select:text;-webkit-user-select:text}
     <button class="go" id="mkb" type="button">Crear key</button>
     <p class="msg" id="mm" style="color:#ffb4b4"></p>
     <div id="res" style="display:none">
-      <p class="msg" style="margin:10px 0 6px">Link para tus jugadores:</p>
-      <div class="kv" id="lk" style="font-size:.8rem"></div>
+      <p class="msg" style="margin:10px 0 6px">Key creada. Pulsa Siguiente para generar tu script; el link para tus jugadores aparecerá al final.</p>
       <p class="msg" id="idl"></p>
-      <button class="kbtn" id="cl" type="button" style="width:100%;margin-top:8px"><svg class="ic"><use href="#i-copy"/></svg><span>Copiar link</span></button>
       <button class="go" id="fnext" type="button" style="margin-top:10px">Siguiente</button>
     </div>
   </div>
@@ -312,6 +310,9 @@ input{user-select:text;-webkit-user-select:text}
       <p class="msg" style="margin:10px 0 6px">Script listo. Pégalo en tu executor:</p>
       <div class="kv" id="fcode" style="font-size:.7rem;max-height:180px;overflow:auto;white-space:pre;text-align:left"></div>
       <button class="kbtn" id="fcp" type="button" style="width:100%;margin-top:8px"><svg class="ic"><use href="#i-copy"/></svg><span>Copiar script</span></button>
+      <p class="msg" style="margin:14px 0 6px">Link de tu key para tus jugadores:</p>
+      <div class="kv" id="lk" style="font-size:.8rem"></div>
+      <button class="kbtn" id="cl" type="button" style="width:100%;margin-top:8px"><svg class="ic"><use href="#i-copy"/></svg><span>Copiar link</span></button>
     </div>
   </div>
   <div class="login" id="ml">
@@ -375,7 +376,7 @@ input{user-select:text;-webkit-user-select:text}
     <p class="msg" id="key" style="text-align:center;font-size:.9rem;margin:10px 0 0;color:#eafff1"></p>
     <button class="open" id="op" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/><circle cx="12" cy="16" r="1.3" fill="#fff"/></svg>
-      Open
+      Obtener key
     </button>
   <div class="keybox" id="kb" style="display:none">
       <div class="kv" id="kv"></div>
@@ -731,7 +732,7 @@ sub.Size = UDim2.new(1, 0, 0, 20)
 sub.Position = UDim2.fromOffset(0, 80)
 sub.Font = Enum.Font.Gotham
 sub.TextSize = 13
-sub.Text = "Introduce tu key para continuar"
+sub.Text = "Enter your key to continue"
 sub.TextColor3 = Color3.fromRGB(200, 205, 240)
 sub.Parent = panel
 
@@ -742,7 +743,7 @@ box.BackgroundColor3 = Color3.fromRGB(24, 26, 52)
 box.BorderSizePixel = 0
 box.ClearTextOnFocus = false
 box.Text = ""
-box.PlaceholderText = "Pega tu key aquí"
+box.PlaceholderText = "Paste your key here"
 box.PlaceholderColor3 = Color3.fromRGB(140, 145, 190)
 box.TextColor3 = Color3.fromRGB(240, 240, 255)
 box.Font = Enum.Font.Code
@@ -797,7 +798,7 @@ local function iconButton(pos, fallback, link, iconUrl)
   end
   b.MouseButton1Click:Connect(function()
     if setclipboard then setclipboard(link) end
-    status.Text = "Link copiado al portapapeles"
+    status.Text = "Link copied to clipboard"
     status.TextColor3 = Color3.fromRGB(200, 205, 240)
   end)
   return b
@@ -814,11 +815,11 @@ local function verify(key)
   local okGet, body = pcall(function()
     return game:HttpGet(API .. "/api/check?key=" .. HttpService:UrlEncode(key))
   end)
-  if not okGet then return false, "No se pudo conectar con AsierKey" end
+  if not okGet then return false, "Could not connect to AsierKey" end
   local okJson, data = pcall(function() return HttpService:JSONDecode(body) end)
-  if not okJson or type(data) ~= "table" then return false, "Respuesta no válida" end
+  if not okJson or type(data) ~= "table" then return false, "Invalid response" end
   if data.valid == true then return true, "" end
-  return false, tostring(data.error or "Key no válida")
+  return false, tostring(data.error or "Invalid key")
 end
 
 local checking = false
@@ -826,16 +827,16 @@ local function doCheck()
   if checking then return end
   local key = (box.Text:gsub("^%s+", ""):gsub("%s+$", ""))
   if key == "" then
-    status.Text = "Escribe tu key"
+    status.Text = "Please enter your key"
     status.TextColor3 = Color3.fromRGB(255, 120, 140)
     return
   end
   checking = true
-  status.Text = "Comprobando..."
+  status.Text = "Checking..."
   status.TextColor3 = Color3.fromRGB(200, 205, 240)
   local ok, err = verify(key)
   if ok then
-    status.Text = "Key válida ✓"
+    status.Text = "Key valid ✓"
     status.TextColor3 = Color3.fromRGB(120, 255, 170)
     task.wait(0.6)
     gui:Destroy()
@@ -850,6 +851,16 @@ end
 
 checkBtn.MouseButton1Click:Connect(doCheck)
 box.FocusLost:Connect(function(enter) if enter then doCheck() end end)
+
+-- Visual polish: smooth entrance, focus glow, button hover
+local TI = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+panel.Size = UDim2.fromOffset(340, 270)
+panel.BackgroundTransparency = 1
+TweenService:Create(panel, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(360, 290), BackgroundTransparency = 0.12}):Play()
+box.Focused:Connect(function() TweenService:Create(boxStroke, TI, {Color = Color3.fromRGB(170, 150, 255), Thickness = 2}):Play() end)
+box.FocusLost:Connect(function() TweenService:Create(boxStroke, TI, {Color = Color3.fromRGB(110, 100, 200), Thickness = 1}):Play() end)
+checkBtn.MouseEnter:Connect(function() TweenService:Create(checkBtn, TI, {BackgroundColor3 = Color3.fromRGB(110, 92, 230)}):Play() end)
+checkBtn.MouseLeave:Connect(function() TweenService:Create(checkBtn, TI, {BackgroundColor3 = Color3.fromRGB(88, 70, 200)}):Play() end)
 `;
 }
 $('fgen').onclick=async()=>{
