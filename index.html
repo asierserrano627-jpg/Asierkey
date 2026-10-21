@@ -191,7 +191,7 @@ input{user-select:text;-webkit-user-select:text}
 
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+
 </head>
 <body>
 <div id="welcomeAK" aria-label="Presentación de AsierKey">
@@ -218,7 +218,7 @@ input{user-select:text;-webkit-user-select:text}
     <article class="akfeature"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg></div><h4>Centro personal de Keys</h4><p>Accesos a la creación y gestión de links. El estado real de las keys se consulta al entrar en tu cuenta.</p></article>
     <article class="akfeature"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></div><h4>Personalización del universo</h4><p>Temas Nebulosa, Cian y Cosmic pink, con modo ligero y sonidos opcionales; la preferencia visual se guarda localmente.</p></article>
     <article class="akfeature"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></div><h4>Centro de notificaciones</h4><p>Zona preparada para avisos de caducidad y novedades. Las notificaciones reales requieren eventos generados por el servidor.</p></article>
-    <article class="akfeature"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.2 2c-1.2.9-1.7 1.2-1.7 2.5M12 17h.01"/></svg></div><h4>Ayuda y soporte</h4><p>Información sobre acceso, CAPTCHA, creación de keys y solución de problemas habituales.</p></article>
+    <article class="akfeature"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.2 2c-1.2.9-1.7 1.2-1.7 2.5M12 17h.01"/></svg></div><h4>Ayuda y soporte</h4><p>Información sobre acceso, creación de keys y solución de problemas habituales.</p></article>
     <article class="akfeature ak-portal-card"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="5" transform="rotate(-35 12 12)"/><ellipse cx="12" cy="12" rx="5" ry="9" transform="rotate(-35 12 12)"/><circle cx="12" cy="12" r="2"/></svg></div><h4>Transiciones tipo portal</h4><p>Destellos y cambios de sección discretos, con animación reducida si el dispositivo lo solicita.</p></article>
     <article class="akfeature"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></div><h4>Sesiones y seguridad</h4><p>Cierra la sesión actual desde el panel. La lista de dispositivos y revocación remota necesita soporte adicional del backend.</p></article>
     <article class="akfeature"><div class="akfi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 16h5"/></svg></div><h4>Página de novedades</h4><p>Espacio para publicar cambios, nuevas funciones y avisos de mantenimiento de AsierKey.</p></article>
@@ -247,9 +247,9 @@ input{user-select:text;-webkit-user-select:text}
     </div>
     <section class="extra-panel" id="extra-keys"><button class="back" type="button" data-extraback>← Volver</button><h2>CENTRO DE KEYS</h2><p class="msg">Acceso rápido a las funciones de gestión disponibles en tu cuenta.</p><div class="extra-card"><h3>Crear una nueva key</h3><p>Configura proveedor, duración y checkpoints desde el asistente existente.</p><button class="extra-action" id="extraCreate">＋ Crear key</button></div><div class="extra-card"><h3>Mis keys y enlaces</h3><p>Consulta, copia o elimina tus enlaces guardados en el servidor.</p><button class="extra-action" id="extraLinks">↗ Abrir mis links</button></div><div class="extra-card"><h3>Consejo de seguridad</h3><p>No compartas tus claves de cuenta. Revoca o elimina enlaces que ya no necesites.</p></div></section>
     <section class="extra-panel" id="extra-notifications"><button class="back" type="button" data-extraback>← Volver</button><h2>NOTIFICACIONES</h2><p class="msg">Avisos locales de esta interfaz; los avisos remotos requieren un servicio conectado.</p><div id="akNotificationList"><div class="extra-card"><span class="extra-badge">INFORMACIÓN</span><h3>Bienvenido a AsierKey</h3><p>Personaliza tu universo desde Ajustes.</p></div><div class="extra-card"><span class="extra-badge">SEGURIDAD</span><h3>Protege tu cuenta</h3><p>Utiliza una contraseña única y cierra sesión en dispositivos compartidos.</p></div></div><button class="extra-action" id="akReadNotifications">✓ Marcar como leídas</button></section>
-    <section class="extra-panel" id="extra-security"><button class="back" type="button" data-extraback>← Volver</button><h2>SEGURIDAD DE LA CUENTA</h2><div class="extra-card"><h3>Sesión actual</h3><p id="akSessionStatus">Estado: no verificado</p><span class="extra-badge">Sesión local del navegador</span><p>La lista de dispositivos conectados requiere soporte adicional del servidor; esta vista no inventa sesiones remotas.</p><button class="extra-action" id="akCheckSession">Actualizar estado</button><button class="extra-action" id="akSecurityLogout">Cerrar sesión</button></div><div class="extra-card"><h3>Buenas prácticas</h3><p>• Usa una contraseña de al menos 12 caracteres.</p><p>• No compartas el acceso a tu cuenta.</p><p>• Completa el CAPTCHA al iniciar sesión.</p></div></section>
-    <section class="extra-panel" id="extra-help"><button class="back" type="button" data-extraback>← Volver</button><h2>AYUDA Y SOPORTE</h2><p class="msg">Respuestas rápidas para los problemas habituales.</p><details><summary>No puedo iniciar sesión</summary><p>Comprueba el correo y la contraseña, completa el CAPTCHA y verifica que el servidor API esté desplegado.</p></details><details><summary>No aparece el CAPTCHA</summary><p>Revisa la configuración Turnstile y las variables de entorno de Vercel para el dominio publicado.</p></details><details><summary>No puedo crear una key</summary><p>Inicia sesión y verifica que las variables de Redis/Upstash estén configuradas en el despliegue.</p></details><details><summary>¿Dónde están mis enlaces?</summary><p>Abre “Mis links” desde el menú. Los datos se solicitan a la API del proyecto.</p></details><div class="extra-card"><h3>Contacto</h3><p>Prepara un mensaje con el error exacto, el navegador y los pasos para reproducirlo. No incluyas contraseñas ni tokens.</p><label for="akSupportMsg">Descripción del problema</label><textarea id="akSupportMsg" rows="3" placeholder="Cuéntanos qué ocurre…"></textarea><button class="extra-action" id="akCopySupport">Copiar mensaje</button><p id="akSupportStatus" class="msg" aria-live="polite"></p></div></section>
-    <section class="extra-panel" id="extra-news"><button class="back" type="button" data-extraback>← Volver</button><h2>NOVEDADES</h2><div class="extra-card"><span class="extra-badge">INTERFAZ</span><h3>Universo personalizable</h3><p>Temas de color, modo ligero y control de sonido.</p><small>Funciones de interfaz</small></div><div class="extra-card"><span class="extra-badge">CUENTA</span><h3>Acceso con CAPTCHA</h3><p>El flujo de autenticación requiere configurar Turnstile en el servidor.</p></div><div class="extra-card"><span class="extra-badge">EN DESARROLLO</span><h3>Centro de actividad</h3><p>La actividad reciente local aparece en el panel; las notificaciones remotas se añadirán cuando exista un servicio de notificaciones.</p></div></section>
+    <section class="extra-panel" id="extra-security"><button class="back" type="button" data-extraback>← Volver</button><h2>SEGURIDAD DE LA CUENTA</h2><div class="extra-card"><h3>Sesión actual</h3><p id="akSessionStatus">Estado: no verificado</p><span class="extra-badge">Sesión local del navegador</span><p>La lista de dispositivos conectados requiere soporte adicional del servidor; esta vista no inventa sesiones remotas.</p><button class="extra-action" id="akCheckSession">Actualizar estado</button><button class="extra-action" id="akSecurityLogout">Cerrar sesión</button></div><div class="extra-card"><h3>Buenas prácticas</h3><p>• Usa una contraseña de al menos 12 caracteres.</p><p>• No compartas el acceso a tu cuenta.</p></div></section>
+    <section class="extra-panel" id="extra-help"><button class="back" type="button" data-extraback>← Volver</button><h2>AYUDA Y SOPORTE</h2><p class="msg">Respuestas rápidas para los problemas habituales.</p><details><summary>No puedo iniciar sesión</summary><p>Comprueba el correo y la contraseña, y verifica que el servidor API esté desplegado.</p></details><details><summary>No puedo crear una key</summary><p>Inicia sesión y verifica que las variables de Redis/Upstash estén configuradas en el despliegue.</p></details><details><summary>¿Dónde están mis enlaces?</summary><p>Abre “Mis links” desde el menú. Los datos se solicitan a la API del proyecto.</p></details><div class="extra-card"><h3>Contacto</h3><p>Prepara un mensaje con el error exacto, el navegador y los pasos para reproducirlo. No incluyas contraseñas ni tokens.</p><label for="akSupportMsg">Descripción del problema</label><textarea id="akSupportMsg" rows="3" placeholder="Cuéntanos qué ocurre…"></textarea><button class="extra-action" id="akCopySupport">Copiar mensaje</button><p id="akSupportStatus" class="msg" aria-live="polite"></p></div></section>
+    <section class="extra-panel" id="extra-news"><button class="back" type="button" data-extraback>← Volver</button><h2>NOVEDADES</h2><div class="extra-card"><span class="extra-badge">INTERFAZ</span><h3>Universo personalizable</h3><p>Temas de color, modo ligero y control de sonido.</p><small>Funciones de interfaz</small></div><div class="extra-card"><span class="extra-badge">CUENTA</span><h3>Acceso con correo</h3><p>Inicia sesión con tu correo y contraseña.</p></div><div class="extra-card"><span class="extra-badge">EN DESARROLLO</span><h3>Centro de actividad</h3><p>La actividad reciente local aparece en el panel; las notificaciones remotas se añadirán cuando exista un servicio de notificaciones.</p></div></section>
     <section class="extra-panel" id="extra-profile"><button class="back" type="button" data-extraback>← Volver</button><h2>MI ESPACIO</h2><div class="extra-card"><h3>Preferencias guardadas</h3><p>El tema y el modo ligero se guardan en este navegador.</p><p id="akPrefSummary">Cargando preferencias…</p><button class="extra-action" id="akResetPrefs">Restablecer preferencias visuales</button></div><div class="extra-card"><h3>Atajos</h3><button class="extra-action" id="extraProfileSettings">⚙ Abrir ajustes</button><button class="extra-action" id="extraProfileKeys">⌘ Centro de Keys</button></div></section>
     <p class="msg">Tu HWID: <b id="hw"></b></p>
   </div>
@@ -350,7 +350,7 @@ input{user-select:text;-webkit-user-select:text}
   <label class="fl" for="pw">Contraseña</label>
   <div class="pw"><input id="pw" type="password" autocomplete="current-password" placeholder="Tu contraseña"><button type="button" id="eye" aria-label="Mostrar contraseña">&#128065;</button></div>
   <div class="str" id="strw" style="display:none"><i id="str"></i></div>
-  <div class="turnstile-wrap"><div id="akTurnstile"></div></div><p class="captcha-note" id="captchaNote">Completa el CAPTCHA para continuar.</p>
+  
   <button class="go" id="cont" type="button">Continuar</button>
   <button class="dc" type="button" disabled>Discord · Próximamente</button>
   <p class="msg" id="am" style="color:#ffb4b4"></p>
@@ -876,7 +876,7 @@ $('fcp').onclick=()=>copy($('fcode').textContent,$('fcp'));
 
 $('cl').onclick=()=>copy($('lk').textContent,$('cl'));
 document.querySelectorAll('#ct input').forEach(i=>i.addEventListener('input',()=>{$('mm').textContent=''}));
-let AM='login', captchaToken='', captchaWidget=null, captchaReady=false, soundOn=false;
+let AM='login', soundOn=false;
 const AK_ACTIONS=[{id:'create',label:'Crear key',icon:'✦'},{id:'links',label:'Mis links',icon:'↗'}];
 function getFavs(){try{return JSON.parse(ls.g('ak_favs')||'[]').filter(x=>['create','links'].includes(x))}catch(e){return []}}
 function getActivity(){try{return JSON.parse(ls.g('ak_activity')||'[]').slice(0,5)}catch(e){return []}}
@@ -887,19 +887,7 @@ $('favCreate').onclick=()=>toggleFav('create');$('favLinks').onclick=()=>toggleF
 function view(){$('au').style.display=(!ADM&&!K)?'flex':'none';$('dash').style.display=(ADM&&!K)?'flex':'none';if(ADM)$('dh').textContent='Hola, '+(AU||'');renderDashboardExtras()}
 function logout(){recordActivity('Cerraste sesión');ADM='';AU='';ls.s('ak_adm',null);ls.s('ak_adu',null);$('goLogin').lastChild.textContent='Iniciar sesión';adminUI();tog(false)}
 const MAILRE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-let TURNSTILE_SITE_KEY='',captchaConfigLoading=false;
-function captchaMessage(text,error=false){const n=$('captchaNote');if(n){n.textContent=text;n.classList.toggle('error',!!error)}}
-function captchaSolved(token){captchaToken=token||'';if(captchaToken)captchaMessage('Verificación completada.');}
-async function initCaptcha(){
-  if(!document.getElementById('akTurnstile'))return;
-  if(!TURNSTILE_SITE_KEY){if(captchaConfigLoading)return;captchaConfigLoading=true;try{const r=await fetch('/api/captcha-config');const d=await r.json();TURNSTILE_SITE_KEY=String(d.siteKey||'')}catch(e){}captchaConfigLoading=false;if(!TURNSTILE_SITE_KEY){captchaMessage('Falta configurar TURNSTILE_SITE_KEY en Vercel.',true);return}}
-  if(!window.turnstile){setTimeout(initCaptcha,250);return}
-  if(captchaWidget!==null)return;
-  try{captchaWidget=window.turnstile.render('#akTurnstile',{sitekey:TURNSTILE_SITE_KEY,theme:'dark',size:'flexible',callback:captchaSolved,'expired-callback':()=>{captchaToken='';captchaMessage('La verificación caducó. Complétala de nuevo.')},'error-callback':()=>{captchaToken='';captchaMessage('No se pudo cargar el CAPTCHA. Comprueba tu conexión.',true)}});captchaReady=true;captchaMessage('Completa el CAPTCHA para continuar.')}
-  catch(e){captchaMessage('No se pudo iniciar el CAPTCHA.',true)}
-}
-function resetCaptcha(){captchaToken='';if(window.turnstile&&captchaWidget!==null){try{window.turnstile.reset(captchaWidget)}catch(e){}}captchaMessage('Completa el CAPTCHA para continuar.')}
-function setMode(m){AM=m;document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));const r=m==='register';$('at').textContent=r?'Crea tu cuenta':'Bienvenido de nuevo';$('as').textContent=r?'Crea una cuenta con correo y contraseña.':'Inicia sesión para crear y gestionar tus keys.';$('strw').style.display=r?'block':'none';$('pw').autocomplete=r?'new-password':'current-password';$('cont').textContent=r?'Crear cuenta':'Continuar';$('am').textContent='';resetCaptcha()}
+function setMode(m){AM=m;document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));const r=m==='register';$('at').textContent=r?'Crea tu cuenta':'Bienvenido de nuevo';$('as').textContent=r?'Crea una cuenta con correo y contraseña.':'Inicia sesión para crear y gestionar tus keys.';$('strw').style.display=r?'block':'none';$('pw').autocomplete=r?'new-password':'current-password';$('cont').textContent=r?'Crear cuenta':'Continuar';$('am').textContent=''}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 $('eye').onclick=()=>{$('pw').type=$('pw').type==='password'?'text':'password'};
 $('pw').addEventListener('input',()=>{const v=$('pw').value;let n=0;if(v.length>=8)n++;if(v.length>=12)n++;if(/[A-Z]/.test(v)&&/[a-z]/.test(v))n++;if(/\d/.test(v))n++;if(/[^\w\s]/.test(v))n++;$('str').style.width=n*20+'%';$('str').style.background=n<=2?'#f87171':n<=3?'#fbbf24':'#4ade80'});
@@ -908,18 +896,15 @@ $('cont').onclick=async()=>{
   if(!MAILRE.test(email)){$('am').textContent='Escribe un correo válido.';return}
   if(AM==='register'&&password.length<8){$('am').textContent='La contraseña debe tener al menos 8 caracteres.';return}
   if(!password){$('am').textContent='Escribe tu contraseña.';return}
-  if(!TURNSTILE_SITE_KEY){captchaMessage('Falta configurar TURNSTILE_SITE_KEY en Vercel.',true);$('am').textContent='El CAPTCHA aún no está configurado para este dominio.';return}
-  if(!captchaToken){$('am').textContent='Completa primero la verificación CAPTCHA.';captchaMessage('Completa el CAPTCHA para continuar.',true);return}
   $('cont').disabled=true;$('am').textContent='';
   try{
-    const r=await fetch('/api/auth',J({mode:AM,email,password,cf:captchaToken}));let d={};try{d=await r.json()}catch(e){}
-    if(!r.ok||!d.token){$('am').textContent=d.error||'No se pudo iniciar sesión.';resetCaptcha();return}
-    ADM=d.token;AU=d.name||email;ls.s('ak_adm',ADM);ls.s('ak_adu',AU);$('pw').value='';recordActivity(AM==='register'?'Cuenta creada':'Inicio de sesión');adminUI();captchaMessage('Verificación completada.');resetCaptcha();
-  }catch(e){$('am').textContent='No hay servidor /api aquí.';resetCaptcha()}
+    const r=await fetch('/api/auth',J({mode:AM,email,password}));let d={};try{d=await r.json()}catch(e){}
+    if(!r.ok||!d.token){$('am').textContent=d.error||'No se pudo iniciar sesión.';return}
+    ADM=d.token;AU=d.name||email;ls.s('ak_adm',ADM);ls.s('ak_adu',AU);$('pw').value='';recordActivity(AM==='register'?'Cuenta creada':'Inicio de sesión');adminUI();
+  }catch(e){$('am').textContent='No hay servidor /api aquí.'}
   finally{$('cont').disabled=false}
 };
 $('pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('cont').click()});
-setTimeout(initCaptcha,0);
 $('dk').onclick=()=>{recordActivity('Abriste Crear key');tog(true);$('mk').click()};$('dl').onclick=()=>{recordActivity('Abriste Mis links');tog(true);$('goML').click()};$('dx').onclick=logout;
 const GOOGLE_CLIENT_ID='383654977179-foddamf6uif2dv4fj8fa7b04hmc0ofgc.apps.googleusercontent.com';
 async function onGoogle(resp){
