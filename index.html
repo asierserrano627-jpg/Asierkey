@@ -898,8 +898,8 @@ $('cont').onclick=async()=>{
   if(!password){$('am').textContent='Escribe tu contraseña.';return}
   $('cont').disabled=true;$('am').textContent='';
   try{
-    const r=await fetch('/api/auth',J({mode:AM,email,password}));let d={};try{d=await r.json()}catch(e){}
-    if(!r.ok||!d.token){$('am').textContent=d.error||'No se pudo iniciar sesión.';return}
+    const r=await fetch('/api/auth',J({mode:AM,email,password}));let d={};try{d=await r.json()}catch(e){d={error:'El servidor no respondió correctamente (HTTP '+r.status+'). Revisa las funciones /api y las variables de Upstash en Vercel.'}}
+    if(!r.ok||!d.token){$('am').textContent=d.error||('No se pudo iniciar sesión (HTTP '+r.status+').');return}
     ADM=d.token;AU=d.name||email;ls.s('ak_adm',ADM);ls.s('ak_adu',AU);$('pw').value='';recordActivity(AM==='register'?'Cuenta creada':'Inicio de sesión');adminUI();
   }catch(e){$('am').textContent='No hay servidor /api aquí.'}
   finally{$('cont').disabled=false}
