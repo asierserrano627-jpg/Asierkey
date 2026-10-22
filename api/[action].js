@@ -2,7 +2,7 @@
 const {crypto,redis}=require('./_lib');
 const E=process.env,CID=E.GOOGLE_CLIENT_ID||'383654977179-foddamf6uif2dv4fj8fa7b04hmc0ofgc.apps.googleusercontent.com';
 const ADMINS=(E.ADMINS||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean); // opcional: solo estos correos crean keys
-const HOSTS={linkvertise:['linkvertise.com','link-to.net','direct-link.net','up-to-down.net','link-hub.net','link-target.net','link-center.net','link-depot.net','link-spot.net','link-place.net','file-link.net','filemedia.net'],lootlabs:['loot-link.com','loot-links.com','lootlinks.co','lootdest.com','lootdest.org','lootdest.info','lootlabs.gg']};
+const HOSTS={linkvertise:['linkvertise.com','link-to.net','direct-link.net','up-to-down.net','link-hub.net','link-target.net','link-center.net','link-depot.net','link-spot.net','link-place.net','file-link.net','filemedia.net'],lootlabs:['loot-link.com','loot-links.com','lootlinks.co','lootdest.com','lootdest.org','lootdest.info','lootlabs.gg'],rekonise:['rekonise.com']};
 const inHost=(p,h)=>HOSTS[p].some(d=>h===d||h.endsWith('.'+d));
 const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()}catch(e){return ''}};
 const okLink=(p,u)=>{try{return new URL(u).protocol==='https:'&&inHost(p,hostOf(u))}catch(e){return false}};
