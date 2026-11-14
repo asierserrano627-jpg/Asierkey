@@ -1,5 +1,5 @@
 // Un solo archivo para: ping, google, create, list, delete, status, start, complete, renew, check
-const {crypto,redis}=require('./_lib');
+const {crypto,redis,sha}=require('./_lib');
 const E=process.env,CID=E.GOOGLE_CLIENT_ID||'383654977179-foddamf6uif2dv4fj8fa7b04hmc0ofgc.apps.googleusercontent.com';
 const ADMINS=(E.ADMINS||'').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean); // opcional: solo estos correos crean keys
 const HOSTS={linkvertise:['linkvertise.com','link-to.net','direct-link.net','up-to-down.net','link-hub.net','link-target.net','link-center.net','link-depot.net','link-spot.net','link-place.net','file-link.net','filemedia.net'],lootlabs:['loot-link.com','loot-links.com','lootlinks.co','lootdest.com','lootdest.org','lootdest.info','lootlabs.gg'],rekonise:['rekonise.com']};
@@ -20,6 +20,13 @@ const blAdd=async(hwid,reason,key)=>{
   const v={until:Date.now()+BL*1000,reason,key:key||null,disc:disc||null};await S('bl:'+hwid,v,BL);await redis('SADD','blset',hwid);
   if(E.DISCORD_WEBHOOK)await fetch(E.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'🚫 Blacklist 24h · '+reason+(disc?' · <@'+disc+'>':'')+' · HWID '+hwid+(k1?' · key '+k1.slice(0,7)+'…':'')})}).catch(()=>{})};
 const okId=v=>typeof v==='string'&&/^[\w-]{4,64}$/.test(v);
+// ── Anti-bypass ──
+// Tiempo mínimo por checkpoint (segundos). Lootlabs tiene tareas de ~30-60s, así que 12s era muy poco.
+const MINS={linkvertise:+E.MIN_LINKVERTISE||20,lootlabs:+E.MIN_LOOTLABS||35,rekonise:+E.MIN_REKONISE||20,asierkey:15};
+const ipOf=q=>String((q.headers['x-forwarded-for']||'').split(',')[0]||(q.socket&&q.socket.remoteAddress)||'').trim();
+const fp=q=>sha(ipOf(q)+'|'+(q.headers['user-agent']||'')); // huella IP + navegador
+// 3 intentos sospechosos en 1 hora = blacklist de 24h (la misma que ya usas para keys compartidas)
+const strike=async(hwid,reason)=>{const c=await redis('INCR','st:'+hwid);if(c===1)await redis('EXPIRE','st:'+hwid,3600);if(c>=3)await blAdd(hwid,'bypass: '+reason,null)};
 const verify=async(key,hwid)=>{
   const now=Date.now();
   const bl=b=>{const r=Math.max(1,Math.ceil((b.until-Date.now())/1000));return {valid:false,blacklisted:true,remaining:r,message:'You are blacklisted ('+fmt(r)+' left)'}};
@@ -81,11 +88,13 @@ start:async(q,res)=>{
   const {k,hwid,env}=q.body||{},l=okId(k)&&okId(hwid)&&await J('link:'+k);
   if(!l)return bad(res,'Link no válido.');
   if(await redis('SISMEMBER','ban:'+l.owner,hwid))return bad(res,'Tu dispositivo está bloqueado.',403);
+  const b0=await blGet(hwid);
+  if(b0)return bad(res,'Bloqueado por intento de bypass. Vuelve en '+fmt(Math.max(1,Math.ceil((b0.until-Date.now())/1000)))+'.',403);
   const s=(await J('ps:'+k+':'+hwid))||{done:0};
   if(s.key)return bad(res,'Ya tienes una key.');
-  if(env&&env.wd){await log(l.owner,'lbyp',{t:Date.now(),reason:'webdriver',hwid});return bad(res,'Navegador automatizado no permitido.',403)}
-  const own=l.provider==='asierkey',min=own?15:12,token=rid(16);
-  await S('tok:'+token,{k,hwid,t0:Date.now(),min,p:l.provider},3600);
+  if(env&&env.wd){await log(l.owner,'lbyp',{t:Date.now(),reason:'webdriver',hwid});await strike(hwid,'webdriver');return bad(res,'Navegador automatizado no permitido.',403)}
+  const own=l.provider==='asierkey',min=MINS[l.provider]||12,token=rid(16);
+  await S('tok:'+token,{k,hwid,t0:Date.now(),min,p:l.provider,fp:fp(q)},3600);
   res.json(own?{token,min}:{token,url:l.links[s.done]});
 },
 complete:async(q,res)=>{
@@ -94,12 +103,19 @@ complete:async(q,res)=>{
   await redis('DEL','tok:'+tk); // un solo uso
   const l=await J('link:'+t.k);if(!l)return bad(res,'Link no válido.');
   if(await redis('SISMEMBER','ban:'+l.owner,t.hwid))return bad(res,'Tu dispositivo está bloqueado.',403);
+  if(t.fp&&t.fp!==fp(q)){ // start y complete desde otra IP/navegador (típico de scripts o bypass remotos)
+    await log(l.owner,'lbyp',{t:Date.now(),reason:'IP/navegador distinto',hwid:t.hwid});
+    if(E.BIND_IP==='1'){await strike(t.hwid,'IP distinta');return bad(res,'Tu red o navegador cambió durante el checkpoint. Pulsa Open otra vez.',403)}
+  }
   const wait=Math.ceil((t.t0+t.min*1000-Date.now())/1000);
-  if(wait>0){await log(l.owner,'lbyp',{t:Date.now(),reason:'demasiado rápido',hwid:t.hwid});return res.status(425).json({error:'Checkpoint completado demasiado rápido.',wait})}
+  if(wait>0){await log(l.owner,'lbyp',{t:Date.now(),reason:'demasiado rápido',hwid:t.hwid});await strike(t.hwid,'demasiado rápido');return res.status(425).json({error:'Checkpoint completado demasiado rápido.',wait})}
   if(t.p!=='asierkey'){
-    const host=hostOf((q.body||{}).ref||''),ok=!!host&&inHost(t.p,host);
+    const host=hostOf((q.body||{}).ref||''),good=!!host&&inHost(t.p,host);
+    // La página de Lootlabs usa referrer "no-referrer", así que un usuario legítimo puede llegar SIN origen.
+    // Para Lootlabs solo se rechaza un origen distinto (otra web); sin origen se acepta.
+    const ok=good||(!host&&t.p==='lootlabs');
     await log(l.owner,'lref',{t:Date.now(),p:t.p,host:host||'(sin origen)',ok});
-    if(!ok&&E.REF_STRICT==='1')return bad(res,'Origen no válido.',403);
+    if(!ok&&E.REF_STRICT==='1'){await strike(t.hwid,'origen no válido');return bad(res,'Origen no válido.',403)}
   }
   const sk='ps:'+t.k+':'+t.hwid,s=(await J(sk))||{done:0};
   if(s.key)return bad(res,'Ya tienes una key.');
