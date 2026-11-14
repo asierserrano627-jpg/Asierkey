@@ -124,6 +124,8 @@ local ok,src=pcall(function() return game:HttpGet("${base}/api/script?key="..key
 if not ok or not src or src=="" then lp:Kick("Could not reach the server. Try again.") return end
 local f=loadstring(src)
 if not f then lp:Kick("Loader error. Contact support.") return end
+pcall(function() getgenv().script_key=key end)
+_G.script_key=key
 f()`;
   res.setHeader('Content-Type','text/plain; charset=utf-8');res.status(200).send(lua)
 },
