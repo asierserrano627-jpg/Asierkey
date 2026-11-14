@@ -20,6 +20,24 @@ const blAdd=async(hwid,reason,key)=>{
   const v={until:Date.now()+BL*1000,reason,key:key||null,disc:disc||null};await S('bl:'+hwid,v,BL);await redis('SADD','blset',hwid);
   if(E.DISCORD_WEBHOOK)await fetch(E.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'🚫 Blacklist 24h · '+reason+(disc?' · <@'+disc+'>':'')+' · HWID '+hwid+(k1?' · key '+k1.slice(0,7)+'…':'')})}).catch(()=>{})};
 const okId=v=>typeof v==='string'&&/^[\w-]{4,64}$/.test(v);
+const verify=async(key,hwid)=>{
+  const now=Date.now();
+  const bl=b=>{const r=Math.max(1,Math.ceil((b.until-Date.now())/1000));return {valid:false,blacklisted:true,remaining:r,message:'You are blacklisted ('+fmt(r)+' left)'}};
+  if(okId(hwid)){const b=await blGet(hwid);if(b)return bl(b)}
+  const x=okId(key)&&await J('keyidx:'+key);
+  if(x&&x.exp>now&&E.REQUIRE_REDEEM==='1'&&!(await redis('GET','dkey:'+key)))return {valid:false,error:'Redeem your key in Discord first',message:'Redeem your key in Discord first'};
+  if(x&&x.exp>now&&okId(hwid)){
+    if(!x.shwid){x.shwid=hwid;await redis('SET','keyidx:'+key,JSON.stringify(x),'KEEPTTL')}
+    else if(x.shwid!==hwid){ // misma key desde otro dispositivo = key compartida
+      const dueno=x.shwid;await blAdd(hwid,'usó una key compartida',key);await blAdd(dueno,'compartió su key',key);
+      return bl(await blGet(hwid));
+    }
+    const hk=(await J('hk:'+hwid))||{};for(const k in hk)if(hk[k]<=now)delete hk[k];hk[key]=x.exp; // dos keys activas con el mismo dispositivo
+    await S('hk:'+hwid,hk,2592000+60);
+    if(Object.keys(hk).length>1){await blAdd(hwid,'usó 2 keys a la vez',Object.keys(hk).join(','));return bl(await blGet(hwid))}
+  }
+  return {valid:!!(x&&x.exp>now),expiresIn:x?Math.max(0,Math.round((x.exp-now)/1000)):0};
+};
 const who=async req=>{const t=(req.headers.authorization||'').replace('Bearer ','');return /^[0-9a-f]{48}$/.test(t)?redis('GET','adm:'+t):null};
 const H={
 ping:async(q,res)=>res.json({ok:true,upstash:!!(E.UPSTASH_REDIS_REST_URL||E.KV_REST_API_URL)}),
@@ -96,27 +114,30 @@ renew:async(q,res)=>{
   if(s&&s.key&&s.exp>Date.now())return bad(res,'Tu key aún no caduca.');
   await redis('DEL','ps:'+k+':'+hwid);res.json({ok:true});
 },
-check:async(q,res)=>{ // script: GET /api/check?key=AK-...&hwid=<id del ejecutor>
-  const {key,hwid}=q.query,now=Date.now();
-  const out=async b=>{const r=Math.max(1,Math.ceil((b.until-Date.now())/1000));return res.json({valid:false,blacklisted:true,remaining:r,message:'You are blacklisted ('+fmt(r)+' left)'})};
-  if(okId(hwid)){const b=await blGet(hwid);if(b)return out(b)}
-  const x=okId(key)&&await J('keyidx:'+key);
-  // 1 key = 1 cuenta de Discord: si REQUIRE_REDEEM=1, la key debe estar canjeada en Discord
-  if(x&&x.exp>now&&E.REQUIRE_REDEEM==='1'&&!(await redis('GET','dkey:'+key)))return res.json({valid:false,error:'Redeem your key in Discord first',message:'Redeem your key in Discord first'});
-  if(x&&x.exp>now&&okId(hwid)){
-    if(!x.shwid){x.shwid=hwid;await redis('SET','keyidx:'+key,JSON.stringify(x),'KEEPTTL')}
-    else if(x.shwid!==hwid){ // misma key desde otro dispositivo = key compartida
-      const dueno=x.shwid;await blAdd(hwid,'usó una key compartida',key);await blAdd(dueno,'compartió su key',key);
-      return out(await blGet(hwid));
-    }
-    // dos keys activas distintas con el mismo dispositivo
-    const hk=(await J('hk:'+hwid))||{};for(const k in hk)if(hk[k]<=now)delete hk[k];hk[key]=x.exp;
-    await S('hk:'+hwid,hk,2592000+60);
-    if(Object.keys(hk).length>1){await blAdd(hwid,'usó 2 keys a la vez',Object.keys(hk).join(','));return out(await blGet(hwid))}
-  }
-  res.json({valid:!!(x&&x.exp>now),expiresIn:x?Math.max(0,Math.round((x.exp-now)/1000)):0});
+check:async(q,res)=>res.json(await verify(q.query.key,q.query.hwid)),
+loader:async(q,res)=>{ // lo que ejecuta el comprador: pide el script real a la web con su key y su HWID
+  const base='https://'+(q.headers['x-forwarded-host']||q.headers.host);
+  const lua=`local lp=game:GetService("Players").LocalPlayer
+local key=script_key or (getgenv and getgenv().script_key) or ""
+local hwid=game:GetService("RbxAnalyticsService"):GetClientId()
+local ok,src=pcall(function() return game:HttpGet("${base}/api/script?key="..key.."&hwid="..hwid) end)
+if not ok or not src or src=="" then lp:Kick("Could not reach the server. Try again.") return end
+local f=loadstring(src)
+if not f then lp:Kick("Loader error. Contact support.") return end
+f()`;
+  res.setHeader('Content-Type','text/plain; charset=utf-8');res.status(200).send(lua)
+},
+script:async(q,res)=>{ // devuelve el script real solo si la key es válida y no está en blacklist
+  const kick=m=>{res.setHeader('Content-Type','text/plain; charset=utf-8');res.status(200).send('game:GetService("Players").LocalPlayer:Kick('+JSON.stringify(String(m))+')')};
+  const {key,hwid}=q.query;
+  if(!okId(hwid))return kick('Missing HWID');
+  const v=await verify(key,hwid);
+  if(!v.valid)return kick(v.message||'Invalid or expired key.');
+  const src=await redis('GET','script:main');
+  if(!src)return kick('Script not configured yet. Contact support.');
+  res.setHeader('Content-Type','text/plain; charset=utf-8');res.setHeader('Cache-Control','no-store');res.status(200).send(String(src));
 }};
-const PUB=['ping','google','status','start','complete','renew','check'];
+const PUB=['ping','google','status','start','complete','renew','check','loader','script'];
 module.exports=async(req,res)=>{try{
   const a=req.query.action,f=Object.prototype.hasOwnProperty.call(H,a)&&H[a];if(!f)return bad(res,'No existe.',404);
   let me=null;if(!PUB.includes(a)){me=await who(req);if(!me)return bad(res,'No autorizado.',401);if(ADMINS.length&&!ADMINS.includes(me))return bad(res,'No tienes permiso.',403)}
