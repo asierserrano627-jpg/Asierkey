@@ -12,6 +12,13 @@ const J=async k=>{const v=await redis('GET',k);return v?JSON.parse(v):null};
 const S=(k,v,ex)=>ex?redis('SET',k,JSON.stringify(v),'EX',ex):redis('SET',k,JSON.stringify(v));
 const log=async(o,l,x)=>{await redis('LPUSH',l+':'+o,JSON.stringify(x));await redis('LTRIM',l+':'+o,0,29);
   if(l==='lbyp'&&E.DISCORD_WEBHOOK)await fetch(E.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'⚠️ Bypass en AsierKey: '+x.reason+' · HWID '+String(x.hwid).slice(0,10)})}).catch(()=>{})};
+const BL=86400; // blacklist: 24 horas
+const fmt=r=>{const h=Math.floor(r/3600),m=Math.floor(r%3600/60),sg=r%60;return h>0?h+'h '+m+'m':m>0?m+'m '+sg+'s':sg+'s'};
+const blGet=async h=>{const v=await J('bl:'+h);return v&&v.until>Date.now()?v:null};
+const blAdd=async(hwid,reason,key)=>{
+  const k1=key?String(key).split(',')[0]:null,disc=k1?await redis('GET','dkey:'+k1):null;
+  const v={until:Date.now()+BL*1000,reason,key:key||null,disc:disc||null};await S('bl:'+hwid,v,BL);await redis('SADD','blset',hwid);
+  if(E.DISCORD_WEBHOOK)await fetch(E.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'🚫 Blacklist 24h · '+reason+(disc?' · <@'+disc+'>':'')+' · HWID '+hwid+(k1?' · key '+k1.slice(0,7)+'…':'')})}).catch(()=>{})};
 const okId=v=>typeof v==='string'&&/^[\w-]{4,64}$/.test(v);
 const who=async req=>{const t=(req.headers.authorization||'').replace('Bearer ','');return /^[0-9a-f]{48}$/.test(t)?redis('GET','adm:'+t):null};
 const H={
@@ -89,10 +96,25 @@ renew:async(q,res)=>{
   if(s&&s.key&&s.exp>Date.now())return bad(res,'Tu key aún no caduca.');
   await redis('DEL','ps:'+k+':'+hwid);res.json({ok:true});
 },
-check:async(q,res)=>{ // para tu script: GET /api/check?key=AK-...&hwid=... (hwid opcional). Tras un Reset HWID, la key se vincula al primer hwid que llegue.
-  const {key,hwid}=q.query,x=okId(key)&&await J('keyidx:'+key);
-  if(x&&hwid&&!x.hwid&&x.exp>Date.now()){x.hwid=hwid;await redis('SET','keyidx:'+key,JSON.stringify(x),'KEEPTTL')}
-  res.json({valid:!!(x&&(!hwid||x.hwid===hwid)&&x.exp>Date.now()),expiresIn:x?Math.max(0,Math.round((x.exp-Date.now())/1000)):0});
+check:async(q,res)=>{ // script: GET /api/check?key=AK-...&hwid=<id del ejecutor>
+  const {key,hwid}=q.query,now=Date.now();
+  const out=async b=>{const r=Math.max(1,Math.ceil((b.until-Date.now())/1000));return res.json({valid:false,blacklisted:true,remaining:r,message:'You are blacklisted ('+fmt(r)+' left)'})};
+  if(okId(hwid)){const b=await blGet(hwid);if(b)return out(b)}
+  const x=okId(key)&&await J('keyidx:'+key);
+  // 1 key = 1 cuenta de Discord: si REQUIRE_REDEEM=1, la key debe estar canjeada en Discord
+  if(x&&x.exp>now&&E.REQUIRE_REDEEM==='1'&&!(await redis('GET','dkey:'+key)))return res.json({valid:false,error:'Redeem your key in Discord first',message:'Redeem your key in Discord first'});
+  if(x&&x.exp>now&&okId(hwid)){
+    if(!x.shwid){x.shwid=hwid;await redis('SET','keyidx:'+key,JSON.stringify(x),'KEEPTTL')}
+    else if(x.shwid!==hwid){ // misma key desde otro dispositivo = key compartida
+      const dueno=x.shwid;await blAdd(hwid,'usó una key compartida',key);await blAdd(dueno,'compartió su key',key);
+      return out(await blGet(hwid));
+    }
+    // dos keys activas distintas con el mismo dispositivo
+    const hk=(await J('hk:'+hwid))||{};for(const k in hk)if(hk[k]<=now)delete hk[k];hk[key]=x.exp;
+    await S('hk:'+hwid,hk,2592000+60);
+    if(Object.keys(hk).length>1){await blAdd(hwid,'usó 2 keys a la vez',Object.keys(hk).join(','));return out(await blGet(hwid))}
+  }
+  res.json({valid:!!(x&&x.exp>now),expiresIn:x?Math.max(0,Math.round((x.exp-now)/1000)):0});
 }};
 const PUB=['ping','google','status','start','complete','renew','check'];
 module.exports=async(req,res)=>{try{
