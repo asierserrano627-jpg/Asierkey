@@ -16,6 +16,13 @@ module.exports = async (req, res) => {
     const did = String((req.body || {}).discordId || '').trim();
     if (!/^\d{5,25}$/.test(did)) return fail(res, 'Usuario de Discord no válido.');
 
+    if (action === 'setscript') {
+      const sc = String((req.body || {}).script || '');
+      if (!sc.trim() || sc.length > 200000) return fail(res, 'Script vacío o demasiado largo.');
+      await redis('SET', 'script:main', sc);
+      return res.json({ ok: true });
+    }
+
     // --- blacklist (solo staff, desde el panel) ---
     if (action === 'bl_list') {
       const all = (await redis('SMEMBERS', 'blset')) || [], list = [];
