@@ -12,7 +12,7 @@ const J=async k=>{const v=await redis('GET',k);return v?JSON.parse(v):null};
 const S=(k,v,ex)=>ex?redis('SET',k,JSON.stringify(v),'EX',ex):redis('SET',k,JSON.stringify(v));
 const log=async(o,l,x)=>{await redis('LPUSH',l+':'+o,JSON.stringify(x));await redis('LTRIM',l+':'+o,0,29);
   if(l==='lbyp'&&E.DISCORD_WEBHOOK)await fetch(E.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'⚠️ Bypass en AsierKey: '+x.reason+' · HWID '+String(x.hwid).slice(0,10)})}).catch(()=>{})};
-const BL=86400; // blacklist: 24 horas
+const BL=86400;
 const fmt=r=>{const h=Math.floor(r/3600),m=Math.floor(r%3600/60),sg=r%60;return h>0?h+'h '+m+'m':m>0?m+'m '+sg+'s':sg+'s'};
 const blGet=async h=>{const v=await J('bl:'+h);return v&&v.until>Date.now()?v:null};
 const blAdd=async(hwid,reason,key)=>{
@@ -20,12 +20,9 @@ const blAdd=async(hwid,reason,key)=>{
   const v={until:Date.now()+BL*1000,reason,key:key||null,disc:disc||null};await S('bl:'+hwid,v,BL);await redis('SADD','blset',hwid);
   if(E.DISCORD_WEBHOOK)await fetch(E.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'🚫 Blacklist 24h · '+reason+(disc?' · <@'+disc+'>':'')+' · HWID '+hwid+(k1?' · key '+k1.slice(0,7)+'…':'')})}).catch(()=>{})};
 const okId=v=>typeof v==='string'&&/^[\w-]{4,64}$/.test(v);
-// ── Anti-bypass ──
-// Tiempo mínimo por checkpoint (segundos). Lootlabs tiene tareas de ~30-60s, así que 12s era muy poco.
 const MINS={linkvertise:+E.MIN_LINKVERTISE||20,lootlabs:+E.MIN_LOOTLABS||35,rekonise:+E.MIN_REKONISE||20,asierkey:15};
 const ipOf=q=>String((q.headers['x-forwarded-for']||'').split(',')[0]||(q.socket&&q.socket.remoteAddress)||'').trim();
-const fp=q=>sha(ipOf(q)+'|'+(q.headers['user-agent']||'')); // huella IP + navegador
-// 3 intentos sospechosos en 1 hora = blacklist de 24h (la misma que ya usas para keys compartidas)
+const fp=q=>sha(ipOf(q)+'|'+(q.headers['user-agent']||''));
 const strike=async(hwid,reason)=>{const c=await redis('INCR','st:'+hwid);if(c===1)await redis('EXPIRE','st:'+hwid,3600);if(c>=3)await blAdd(hwid,'bypass: '+reason,null)};
 const verify=async(key,hwid)=>{
   const now=Date.now();
@@ -33,13 +30,18 @@ const verify=async(key,hwid)=>{
   if(okId(hwid)){const b=await blGet(hwid);if(b)return bl(b)}
   const x=okId(key)&&await J('keyidx:'+key);
   if(x&&x.exp>now&&E.REQUIRE_REDEEM==='1'&&!(await redis('GET','dkey:'+key)))return {valid:false,error:'Redeem your key in Discord first',message:'Redeem your key in Discord first'};
+  // ── KILL SWITCH: si la key pertenece a un link con kill switch activo, rechazar ──
+  if(x&&x.exp>now&&x.linkId){
+    const lnk=await J('link:'+x.linkId);
+    if(lnk&&lnk.killed)return {valid:false,error:'Key has been disabled by the owner',message:'Key has been disabled by the owner'};
+  }
   if(x&&x.exp>now&&okId(hwid)){
     if(!x.shwid){x.shwid=hwid;await redis('SET','keyidx:'+key,JSON.stringify(x),'KEEPTTL')}
-    else if(x.shwid!==hwid){ // misma key desde otro dispositivo = key compartida
+    else if(x.shwid!==hwid){
       const dueno=x.shwid;await blAdd(hwid,'usó una key compartida',key);await blAdd(dueno,'compartió su key',key);
       return bl(await blGet(hwid));
     }
-    const hk=(await J('hk:'+hwid))||{};for(const k in hk)if(hk[k]<=now)delete hk[k];hk[key]=x.exp; // dos keys activas con el mismo dispositivo
+    const hk=(await J('hk:'+hwid))||{};for(const k in hk)if(hk[k]<=now)delete hk[k];hk[key]=x.exp;
     await S('hk:'+hwid,hk,2592000+60);
     if(Object.keys(hk).length>1){await blAdd(hwid,'usó 2 keys a la vez',Object.keys(hk).join(','));return bl(await blGet(hwid))}
   }
@@ -66,7 +68,7 @@ create:async(q,res,me)=>{
 },
 list:async(q,res,me)=>{
   const ids=(await redis('SMEMBERS','own:'+me))||[],items=[];
-  for(const id of ids){const l=await J('link:'+id);if(l)items.push({id,provider:l.provider,n:l.n,ttl:l.ttl,players:await redis('SCARD','players:'+id)})}
+  for(const id of ids){const l=await J('link:'+id);if(l)items.push({id,provider:l.provider,n:l.n,ttl:l.ttl,killed:!!l.killed,note:l.note||'',players:await redis('SCARD','players:'+id)})}
   const g=async k=>((await redis('LRANGE',k,0,29))||[]).map(x=>JSON.parse(x));
   const stats={links:items.length,players:items.reduce((a,i)=>a+i.players,0),keys:+(await redis('GET','kc:'+me))||0,bypass:await redis('LLEN','lbyp:'+me)};
   res.json({items,stats,banned:await redis('SMEMBERS','ban:'+me),logs:{mode:E.REF_STRICT==='1'?'strict':'log',ref:await g('lref:'+me),bypass:await g('lbyp:'+me)}});
@@ -78,15 +80,38 @@ delete:async(q,res,me)=>{
   if(!l||l.owner!==me)return bad(res,'No encontrado.',404);
   await redis('DEL','link:'+id);await redis('SREM','own:'+me,id);res.json({ok:true});
 },
+kill:async(q,res,me)=>{
+  const {id,action}=(q.body||{});
+  const l=okId(id)&&await J('link:'+id);
+  if(!l||l.owner!==me)return bad(res,'No encontrado.',404);
+  if(!['kill','reactivate'].includes(action))return bad(res,'Acción no válida.');
+  l.killed=action==='kill';
+  await S('link:'+id,l);
+  res.json({ok:true});
+},
+edit:async(q,res,me)=>{
+  const {id,ttl,note,script}=(q.body||{});
+  const l=okId(id)&&await J('link:'+id);
+  if(!l||l.owner!==me)return bad(res,'No encontrado.',404);
+  if(ttl!==undefined){if(!(ttl>=60&&ttl<=2592000))return bad(res,'Tiempo no válido.');l.ttl=ttl}
+  if(note!==undefined)l.note=String(note).slice(0,120);
+  if(script!==undefined&&script){
+    if(script.length>500000)return bad(res,'Script demasiado grande.');
+    await redis('SET','script:'+id,script);
+  }
+  await S('link:'+id,l);
+  res.json({ok:true});
+},
 status:async(q,res)=>{
   const {hwid,k}=q.query,l=okId(k)&&okId(hwid)&&await J('link:'+k);
   if(!l)return res.json({error:'Link no válido.',total:3,done:0});
   const s=(await J('ps:'+k+':'+hwid))||{done:0};
-  res.json({total:l.n,done:s.done,locked:!!s.key,key:s.key||null,expiresIn:s.key?Math.max(0,Math.round((s.exp-Date.now())/1000)):0});
+  res.json({total:l.n,done:s.done,locked:!!s.key,key:s.key||null,note:l.note||'',expiresIn:s.key?Math.max(0,Math.round((s.exp-Date.now())/1000)):0});
 },
 start:async(q,res)=>{
   const {k,hwid,env}=q.body||{},l=okId(k)&&okId(hwid)&&await J('link:'+k);
   if(!l)return bad(res,'Link no válido.');
+  if(l.killed)return bad(res,'Este link ha sido desactivado por el creador.',403);
   if(await redis('SISMEMBER','ban:'+l.owner,hwid))return bad(res,'Tu dispositivo está bloqueado.',403);
   const b0=await blGet(hwid);
   if(b0)return bad(res,'Bloqueado por intento de bypass. Vuelve en '+fmt(Math.max(1,Math.ceil((b0.until-Date.now())/1000)))+'.',403);
@@ -100,10 +125,11 @@ start:async(q,res)=>{
 complete:async(q,res)=>{
   const tk=String((q.body||{}).token||''),t=/^[0-9a-f]{32}$/.test(tk)&&await J('tok:'+tk);
   if(!t)return bad(res,'Checkpoint no válido o caducado. Pulsa Open otra vez.');
-  await redis('DEL','tok:'+tk); // un solo uso
+  await redis('DEL','tok:'+tk);
   const l=await J('link:'+t.k);if(!l)return bad(res,'Link no válido.');
+  if(l.killed)return bad(res,'Este link ha sido desactivado por el creador.',403);
   if(await redis('SISMEMBER','ban:'+l.owner,t.hwid))return bad(res,'Tu dispositivo está bloqueado.',403);
-  if(t.fp&&t.fp!==fp(q)){ // start y complete desde otra IP/navegador (típico de scripts o bypass remotos)
+  if(t.fp&&t.fp!==fp(q)){
     await log(l.owner,'lbyp',{t:Date.now(),reason:'IP/navegador distinto',hwid:t.hwid});
     if(E.BIND_IP==='1'){await strike(t.hwid,'IP distinta');return bad(res,'Tu red o navegador cambió durante el checkpoint. Pulsa Open otra vez.',403)}
   }
@@ -111,8 +137,6 @@ complete:async(q,res)=>{
   if(wait>0){await log(l.owner,'lbyp',{t:Date.now(),reason:'demasiado rápido',hwid:t.hwid});await strike(t.hwid,'demasiado rápido');return res.status(425).json({error:'Checkpoint completado demasiado rápido.',wait})}
   if(t.p!=='asierkey'){
     const host=hostOf((q.body||{}).ref||''),good=!!host&&inHost(t.p,host);
-    // La página de Lootlabs usa referrer "no-referrer", así que un usuario legítimo puede llegar SIN origen.
-    // Para Lootlabs solo se rechaza un origen distinto (otra web); sin origen se acepta.
     const ok=good||(!host&&t.p==='lootlabs');
     await log(l.owner,'lref',{t:Date.now(),p:t.p,host:host||'(sin origen)',ok});
     if(!ok&&E.REF_STRICT==='1'){await strike(t.hwid,'origen no válido');return bad(res,'Origen no válido.',403)}
@@ -131,7 +155,7 @@ renew:async(q,res)=>{
   await redis('DEL','ps:'+k+':'+hwid);res.json({ok:true});
 },
 check:async(q,res)=>res.json(await verify(q.query.key,q.query.hwid)),
-loader:async(q,res)=>{ // lo que ejecuta el comprador: pide el script real a la web con su key y su HWID
+loader:async(q,res)=>{
   const base='https://'+(q.headers['x-forwarded-host']||q.headers.host);
   const lua=`local lp=game:GetService("Players").LocalPlayer
 local key=script_key or (getgenv and getgenv().script_key) or ""
@@ -145,7 +169,7 @@ _G.script_key=key
 f()`;
   res.setHeader('Content-Type','text/plain; charset=utf-8');res.status(200).send(lua)
 },
-script:async(q,res)=>{ // devuelve el script real solo si la key es válida y no está en blacklist
+script:async(q,res)=>{
   const kick=m=>{res.setHeader('Content-Type','text/plain; charset=utf-8');res.status(200).send('game:GetService("Players").LocalPlayer:Kick('+JSON.stringify(String(m))+')')};
   const {key,hwid}=q.query;
   if(!okId(hwid))return kick('Missing HWID');
