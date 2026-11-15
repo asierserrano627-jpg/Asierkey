@@ -112,6 +112,13 @@ input{user-select:text;-webkit-user-select:text}
 .mi{padding:10px;margin-bottom:8px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-size:.8rem;color:rgba(235,240,255,.8)}
 .mi b{display:block;font-size:.84rem;margin-bottom:3px;color:#fff;word-break:break-all}
 .mi .krow{margin-top:8px}
+.mi .krow4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}
+.mi .krow4 .kbtn{font-size:.78rem;padding:8px 4px}
+.kbtn.kill{border-color:rgba(255,100,100,.5);color:#ff9090}
+.kbtn.kill:hover{background:rgba(255,80,80,.18)}
+.kbtn.reactivate{border-color:rgba(74,222,128,.5);color:#4ade80}
+.ov#editOv{z-index:30}
+#editOv .ovc textarea{width:100%;padding:11px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:#fff;font-size:.85rem;height:90px;resize:vertical;margin-bottom:8px;font-family:inherit}
 
 /* auth */
 .ui{display:none}body.hasK .ui{display:flex}
@@ -309,10 +316,18 @@ input{user-select:text;-webkit-user-select:text}
     <input id="fraw" placeholder="O link Raw (https://raw.githubusercontent.com/...)" autocomplete="off" inputmode="url">
     <input id="fdc" placeholder="Discord (opcional): https://discord.gg/..." autocomplete="off" inputmode="url">
     <input id="fyt" placeholder="YouTube (opcional): https://youtube.com/..." autocomplete="off" inputmode="url">
+    <div style="display:flex;align-items:center;gap:10px;margin:10px 0 6px;padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05)">
+      <input type="checkbox" id="fKeyless" style="width:18px;height:18px;accent-color:#4ade80;cursor:pointer">
+      <div>
+        <label for="fKeyless" style="cursor:pointer;font-weight:600;font-size:.95rem">Modo Keyless</label>
+        <p class="msg" style="margin:2px 0 0;font-size:.75rem">El script se carga sin verificar key. Útil para pruebas o scripts públicos.</p>
+      </div>
+    </div>
     <button class="go" id="fgen" type="button">Generar script</button>
     <p class="msg" id="fmm" style="color:#ffb4b4"></p>
     <div id="fout" style="display:none">
-      <p class="msg" style="margin:10px 0 6px">Script listo. Pégalo en tu executor:</p>
+      <p class="msg" style="margin:10px 0 4px">Script listo. Pégalo en tu executor:</p>
+      <p class="msg" style="margin:0 0 6px;font-size:.72rem;color:rgba(200,210,255,.55)">🛡️ Anti-hook activado · carga el script desde tu API</p>
       <div class="kv" id="fcode" style="font-size:.7rem;max-height:180px;overflow:auto;white-space:pre;text-align:left"></div>
       <button class="kbtn" id="fcp" type="button" style="width:100%;margin-top:8px"><svg class="ic"><use href="#i-copy"/></svg><span>Copiar script</span></button>
       <p class="msg" style="margin:14px 0 6px">Link de tu key para tus jugadores:</p>
@@ -325,6 +340,24 @@ input{user-select:text;-webkit-user-select:text}
     <h2>MIS LINKS</h2>
     <div id="mll"></div>
     <p class="msg" id="mlm"></p>
+  </div>
+  <!-- Edit Key Modal -->
+  <div class="ov" id="editOv" style="display:none;z-index:30">
+    <div class="ovc" style="width:min(100%,380px);text-align:left;max-height:90vh;overflow-y:auto">
+      <h2 style="margin-bottom:14px">✏️ EDITAR KEY</h2>
+      <input type="hidden" id="editId">
+      <label class="fl" for="editTtl">Nuevo tiempo (ej: 60m, 2h, 7d)</label>
+      <input id="editTtl" class="login" placeholder="Dejar vacío = no cambiar" autocomplete="off" style="width:100%;padding:11px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:#fff;font-size:.95rem;margin-bottom:8px">
+      <label class="fl" for="editNote">Nota visible al jugador (opcional)</label>
+      <input id="editNote" class="login" placeholder="Ej: Script de combate v2" autocomplete="off" style="width:100%;padding:11px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:#fff;font-size:.95rem;margin-bottom:8px">
+      <label class="fl" for="editScript">Nuevo script (URL raw o pega el código)</label>
+      <textarea id="editScript" placeholder="https://raw.githubusercontent.com/... (o pega el script)" spellcheck="false" style="width:100%;padding:11px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:#fff;font-size:.85rem;height:90px;resize:vertical;margin-bottom:8px"></textarea>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="go" id="editSave" type="button" style="flex:1">Guardar cambios</button>
+        <button class="kbtn" id="editCancel" type="button" style="flex:0 0 auto;padding:12px 16px">Cancelar</button>
+      </div>
+      <p class="msg" id="editMsg" style="color:#ffb4b4;margin-top:8px"></p>
+    </div>
   </div>
   <div class="login" id="settings">
     <button class="back" id="bkSettings" type="button"><svg class="ic"><use href="#i-back"/></svg>Volver</button>
@@ -635,9 +668,73 @@ local DISCORD_LINK = ${luaQ(o.dc)}
 local YOUTUBE_LINK = ${luaQ(o.yt)}
 local DISCORD_ICON = ${luaQ(DISCORD_ICON_URL)}
 local YOUTUBE_ICON = ${luaQ(YOUTUBE_ICON_URL)}
-local SCRIPT = ${luaQ(o.script)}
 local GET_KEY_URL = ${luaQ(o.getKey)}
+local KEYLESS = ${o.keyless?'true':'false'}
 
+-- ══════════════════════════════════════════════════════════════
+-- ANTI-HOOK v3: múltiples capas de detección
+-- ══════════════════════════════════════════════════════════════
+local _env = getfenv and getfenv(0)
+local _rawLS = loadstring
+local _rawPcall = pcall
+local _rawType = type
+local _rawTostring = tostring
+local _antiMsg = string.char(110,105,99,101,32,116,114,121,32,108,111,108,32,240,159,146,128)
+
+local function _checkHook()
+  -- Cap 1: loadstring debe ser función nativa
+  if _rawType(_rawLS) ~= "function" then return true end
+  -- Cap 2: pcall también debe ser nativa
+  if _rawType(_rawPcall) ~= "function" then return true end
+  -- Cap 3: loadstring("return 1") → fn() → 1
+  local ok1, fn = _rawPcall(_rawLS, "return 1")
+  if not ok1 or _rawType(fn) ~= "function" then return true end
+  local ok2, val = _rawPcall(fn)
+  if not ok2 or val ~= 1 then return true end
+  -- Cap 4: loadstring("return 2+2") → 4
+  local ok3, fn2 = _rawPcall(_rawLS, "return 2+2")
+  if not ok3 or _rawType(fn2) ~= "function" then return true end
+  local ok4, val2 = _rawPcall(fn2)
+  if not ok4 or val2 ~= 4 then return true end
+  -- Cap 5: Verificar que HttpService existe
+  local ok5, hs = _rawPcall(function() return game:GetService("HttpService") end)
+  if not ok5 or not hs then return true end
+  -- Cap 6: Verificar integridad de math.random
+  local ok6, rv = _rawPcall(function() return math.random(1,10) end)
+  if not ok6 or _rawType(rv) ~= "number" or rv < 1 or rv > 10 then return true end
+  return false
+end
+
+if _checkHook() then
+  task.spawn(function()
+    -- Delay aleatorio para frustrar debugging
+    task.wait(math.random(2,5) + math.random())
+    local ok, plr = pcall(function() return game:GetService("Players").LocalPlayer end)
+    if ok and plr then
+      pcall(function() plr:Kick(_antiMsg) end)
+    end
+    -- Fallback: intentar de nuevo tras breve espera
+    task.wait(1)
+    local ok2, plr2 = pcall(function() return game:GetService("Players").LocalPlayer end)
+    if ok2 and plr2 then pcall(function() plr2:Kick(_antiMsg) end) end
+  end)
+  return
+end
+
+-- Cap 7: Monitoreo continuo de hooks en segundo plano
+task.spawn(function()
+  while task.wait(math.random(8,15)) do
+    if _checkHook() then
+      local ok, plr = pcall(function() return game:GetService("Players").LocalPlayer end)
+      if ok and plr then pcall(function() plr:Kick(_antiMsg) end) end
+      break
+    end
+  end
+end)
+
+-- ══════════════════════════════════════════
+-- CARGA DEL SCRIPT VÍA LOADSTRING + API
+-- ══════════════════════════════════════════
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
@@ -832,6 +929,23 @@ end)
 getKeyBtn.MouseEnter:Connect(function() TweenService:Create(getKeyBtn, TI, {BackgroundColor3 = Color3.fromRGB(74, 222, 128)}):Play() end)
 getKeyBtn.MouseLeave:Connect(function() TweenService:Create(getKeyBtn, TI, {BackgroundColor3 = Color3.fromRGB(34, 197, 94)}):Play() end)
 
+-- ══════════════════════════════════════════════════════════════
+-- KEYLESS MODE: si KEYLESS es true, se salta la verificación
+-- ══════════════════════════════════════════════════════════════
+if KEYLESS then
+  gui:Destroy()
+  local scriptOk, scriptBody = pcall(function()
+    return game:HttpGet(API .. "/api/script?keyless=1")
+  end)
+  if scriptOk and scriptBody and #scriptBody > 10 then
+    local fn, lerr = _rawLS(scriptBody)
+    if fn then fn() else warn("AsierKey script error: " .. tostring(lerr)) end
+  else
+    warn("AsierKey: no se pudo cargar el script keyless desde la API")
+  end
+  return
+end
+
 local function verify(key)
   local okGet, body = pcall(function()
     return game:HttpGet(API .. "/api/check?key=" .. HttpService:UrlEncode(key))
@@ -861,8 +975,16 @@ local function doCheck()
     status.TextColor3 = Color3.fromRGB(120, 255, 170)
     task.wait(0.6)
     gui:Destroy()
-    local fn, lerr = loadstring(SCRIPT)
-    if fn then fn() else warn("AsierKey: " .. tostring(lerr)) end
+    -- Carga el script desde la API con loadstring
+    local scriptOk, scriptBody = pcall(function()
+      return game:HttpGet(API .. "/api/script?key=" .. HttpService:UrlEncode(key))
+    end)
+    if scriptOk and scriptBody and #scriptBody > 10 then
+      local fn, lerr = _rawLS(scriptBody)
+      if fn then fn() else warn("AsierKey script error: " .. tostring(lerr)) end
+    else
+      warn("AsierKey: no se pudo cargar el script desde la API")
+    end
   else
     status.Text = err
     status.TextColor3 = Color3.fromRGB(255, 120, 140)
@@ -901,7 +1023,7 @@ $('fgen').onclick=async()=>{
   }
   if(!src.trim())return msg('Pega tu script o un link Raw.');
   if(/^\s*<(!doctype|html)/i.test(src))return msg('Eso es una página web, no un script. Usa el link Raw.');
-  $('fcode').textContent=buildLoader({script:src,dc,yt,getKey:$('lk').textContent});
+  $('fcode').textContent=buildLoader({script:src,dc,yt,getKey:$('lk').textContent,keyless:!!$('fKeyless').checked});
   $('fout').style.display='block';
 };
 $('fcp').onclick=()=>copy($('fcode').textContent,$('fcp'));
@@ -956,6 +1078,34 @@ initGoogle();view();
 function sess(){ADM='';ls.s('ak_adm',null);adminUI();const m='Tu sesión caducó. Vuelve a iniciar sesión desde el menú.';$('mm').textContent=m;$('mlm').textContent=m}
 const fd=s=>s%86400===0?s/86400+'d':s%3600===0?s/3600+'h':Math.round(s/60)+'m';
 function mkBtn(label,icon){const b=document.createElement('button');b.type='button';b.className='kbtn';b.innerHTML=(icon?'<svg class="ic"><use href="#i-'+icon+'"/></svg>':'')+'<span></span>';b.querySelector('span').textContent=label;return b}
+
+// ── Edit Key Modal ────────────────────────────────────────────
+$('editCancel').onclick=()=>{$('editOv').style.display='none'};
+$('editSave').onclick=async()=>{
+  const id=$('editId').value;
+  const ttlRaw=$('editTtl').value.trim();
+  const note=$('editNote').value.trim();
+  const scriptRaw=$('editScript').value.trim();
+  let ttl=0,scriptContent='';
+  if(ttlRaw){ttl=parseTime(ttlRaw);if(ttl<60||ttl>2592000){$('editMsg').textContent='Tiempo inválido (1m–30d).';return}}
+  if(scriptRaw){
+    if(/^https?:\/\//i.test(scriptRaw)){
+      $('editMsg').textContent='Descargando script…';
+      try{const r=await fetch(scriptRaw);if(!r.ok)throw 0;scriptContent=await r.text()}
+      catch(e){$('editMsg').textContent='No se pudo descargar el script.';return}
+    } else {scriptContent=scriptRaw}
+  }
+  $('editSave').disabled=true;$('editMsg').textContent='Guardando…';
+  try{
+    const r=await fetch('/api/edit',{...J({id,ttl:ttl||undefined,note:note||undefined,script:scriptContent||undefined}),headers:AH()});
+    if(r.status===401){sess();return}
+    const d=await r.json();
+    if(!r.ok||d.error){$('editMsg').textContent=d.error||'Error al guardar.';return}
+    $('editOv').style.display='none';loadML();recordActivity('Editaste una key');
+  }catch(e){$('editMsg').textContent='No se pudo conectar.'}
+  finally{$('editSave').disabled=false}
+};
+
 async function loadML(){
   $('mlm').textContent='Cargando…';$('mll').innerHTML='';
   try{
@@ -968,17 +1118,42 @@ async function loadML(){
       const link=location.origin+'/?k='+it.id;
       const el=document.createElement('div');el.className='mi';
       const b=document.createElement('b');b.textContent=link;el.appendChild(b);
-      const t=document.createElement('div');t.textContent=NAMES[it.provider]+' · '+it.n+' checkpoint(s) · '+fd(it.ttl)+' · '+it.players+' jugador(es)';el.appendChild(t);
-      const row=document.createElement('div');row.className='krow';
-      const cb=mkBtn('Copiar','copy'),db=mkBtn('Borrar');
+      // Status badge
+      const statusBadge=document.createElement('span');
+      const isKilled=it.killed||false;
+      statusBadge.textContent=isKilled?'🔴 Kill switch activo':'🟢 Activa';
+      statusBadge.style.cssText='display:inline-block;margin-left:8px;font-size:.7rem;padding:2px 7px;border-radius:999px;background:'+(isKilled?'rgba(255,80,80,.18)':'rgba(74,222,128,.18)')+';color:'+(isKilled?'#ff9090':'#4ade80');
+      b.appendChild(statusBadge);
+      const t=document.createElement('div');t.textContent=NAMES[it.provider]+' · '+it.n+' checkpoint(s) · '+fd(it.ttl)+' · '+it.players+' jugador(es)'+(it.note?' · 📝 '+it.note:'');el.appendChild(t);
+      const row=document.createElement('div');row.className='krow4';
+      const cb=mkBtn('Copiar','copy'),editBtn=mkBtn('✏️ Editar'),killBtn=mkBtn(isKilled?'🔓 Reactivar':'☠️ Kill'),db=mkBtn('Borrar');
+      if(isKilled)killBtn.classList.add('reactivate');else killBtn.classList.add('kill');
       cb.onclick=()=>copy(link,cb);
+      // Edit
+      editBtn.onclick=()=>{
+        $('editId').value=it.id;$('editTtl').value='';$('editNote').value=it.note||'';$('editScript').value='';$('editMsg').textContent='';
+        $('editOv').style.display='flex';
+      };
+      // Kill switch
+      let killArmed=false;
+      killBtn.onclick=async()=>{
+        if(!killArmed&&!isKilled){killArmed=true;killBtn.querySelector('span').textContent='¿Seguro?';setTimeout(()=>{killArmed=false;killBtn.querySelector('span').textContent='☠️ Kill'},3000);return}
+        killBtn.disabled=true;
+        try{
+          const action=isKilled?'reactivate':'kill';
+          const r2=await fetch('/api/kill',{...J({id:it.id,action}),headers:AH()});
+          if(r2.status===401){sess();return}
+          if(r2.ok){recordActivity(isKilled?'Reactivaste una key':'Kill switch activado');loadML()}
+          else{killBtn.disabled=false;killBtn.querySelector('span').textContent='Error'}
+        }catch(e){killBtn.disabled=false}
+      };
       let armed=false;
       db.onclick=async()=>{
         if(!armed){armed=true;db.querySelector('span').textContent='¿Seguro?';setTimeout(()=>{armed=false;db.querySelector('span').textContent='Borrar'},3000);return}
         db.disabled=true;
         try{const r2=await fetch('/api/delete',{...J({id:it.id}),headers:AH()});if(r2.status===401){sess();return}if(r2.ok){el.remove();if(!$('mll').children.length)$('mlm').textContent='Aún no has creado keys.'}else{db.disabled=false;db.querySelector('span').textContent='Error'}}catch(e){db.disabled=false}
       };
-      row.appendChild(cb);row.appendChild(db);el.appendChild(row);$('mll').appendChild(el);
+      row.appendChild(cb);row.appendChild(editBtn);row.appendChild(killBtn);row.appendChild(db);el.appendChild(row);$('mll').appendChild(el);
     });
     const lg=d.logs||{},rf=lg.ref||[],bp=lg.bypass||[];
     if(rf.length||bp.length){
